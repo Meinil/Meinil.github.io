@@ -796,7 +796,7 @@ public static void test3(){
 }
 ```
 
-![image-20201105165311825](./java高级.assets/image-20201105165311825.png)
+![image-20201105165311825](https://gitee.com/dingwanli/picture/raw/master/20210403152658.png)
 
 返回值得到的s8使用常量池中已经存在的"helloworld"
 
