@@ -70,7 +70,7 @@ module.exports = {
         ],
         // 评论
         vssueConfig: {
-            platform: 'github',
+            platform: 'github-v4',
             owner: 'SchrodingerSeeCat',
             repo: 'https://github.com/SchrodingerSeeCat/comment',
             clientId: '56c5af38a94daefe3515',
