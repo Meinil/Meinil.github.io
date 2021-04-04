@@ -4,7 +4,16 @@ module.exports = {
     theme: 'reco',
     // 插件
     plugins: [
-        'vuepress-plugin-mermaidjs'
+        // 渲染mermaid
+        ['vuepress-plugin-mermaidjs'],
+        
+        // 看板娘不生效
+        // [
+        //     '@vuepress-reco/vuepress-plugin-kan-ban-niang', {
+        //         theme: ["whiteCat"],
+        //         clean: true,
+        //     }
+        // ]
     ],
     themeConfig: {
         // vuepress-theme-reco主题的类型

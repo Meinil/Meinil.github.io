@@ -29,7 +29,7 @@ tags:
 
 1. 创建`index.html`并准备“容器”
 
-   ```
+   ```html
    <div id="test"></div>
    ```
 
@@ -74,7 +74,7 @@ tags:
 
 1. `React`提供了一些`API`来创建一种 “特别” 的一般js对象
 
-   ```jsx
+   ```javascript
    const VDOM = (
        <h1 id="test">
        <span>Hello React</span>
@@ -106,7 +106,7 @@ tags:
 
    写法
 
-   ```jax
+   ```javascript
    var ele = <h1>Hello JSX</h1>
    ```
 
@@ -287,7 +287,7 @@ const VDOM = (
 
 **类式组件**
 
-```
+```html
 <div id="test"></div>
 <script type="text/babel">
 // 1. 创建类式组件
@@ -301,6 +301,7 @@ class MyComponent extends React.Component{
 
 // 2. 渲染组件到页面
 ReactDOM.render(<MyComponent />, document.getElementById("test"))
+</script>
 ```
 
 `render`是放在了原型对象上，供实例使用
@@ -344,9 +345,9 @@ ReactDOM.render(<MyComponent />, document.getElementById("test"))
 
 **动态渲染数据**
 
-```jsx
+```html
 <div id="test"></div>
-<script type="text/babel">
+< type="text/babel">
     // 1. 创建类式组件
     class Weather extends React.Component{
 
@@ -368,7 +369,7 @@ ReactDOM.render(<MyComponent />, document.getElementById("test"))
 
     // 2. 渲染组件到页面
     ReactDOM.render(<Weather />, document.getElementById("test"))
-</script>
+</>
 ```
 
 #### 2.2.2 props
@@ -400,7 +401,7 @@ static defaultProps = {
 
 渲染组件
 
-```jsx
+```javascript
 render() {
     return (
         <ul>
@@ -416,13 +417,13 @@ render() {
 
 1. 直接传递
 
-   ```jsx
+   ```javascript
    ReactDOM.render(<Person name="Tom" age={18} sex="男"/>, document.getElementById("test"))
    ```
 
 2. `...`传递
 
-   ```jsx
+   ```javascript
    const p = {name: "老刘", age: 19}
    ReactDOM.render(<Person {...p}/>, document.getElementById("test"))
    ```
@@ -438,7 +439,7 @@ render() {
 
 函数式组件使用`props`
 
-```jsx
+```javascript
 function Person(props) {
     return (
         <ul>
@@ -462,14 +463,14 @@ ReactDOM.render(<Person name="Alcie" age={18} sex="女" />, document.getElementB
 
    `render`
 
-   ```jsx
+   ```javascript
    <input type="text" ref="input1" placeholder="点击按钮提示数据"/>
    <button onClick={this.showData} >点我提示左侧的数据</button>
    ```
 
    方法
 
-   ```jsx
+   ```javascript
    showData = () => {
    	alert(this.refs.input1.value)
    }
@@ -479,7 +480,7 @@ ReactDOM.render(<Person name="Alcie" age={18} sex="女" />, document.getElementB
 
    `render`，`c`为当前节点对象
 
-   ```jsx
+   ```javascript
    <input type="text" ref={(c) => {this.input1 = c}} placeholder="点击按钮提示数据"/>
    <button onClick={this.showData} ref="btn">点我提示左侧的数据</button>&nbsp;
    <input onBlur={this.showData2} type="text" ref={c => this.input2 = c} placeholder="失去焦点提示"/>
@@ -487,7 +488,7 @@ ReactDOM.render(<Person name="Alcie" age={18} sex="女" />, document.getElementB
 
    方法
 
-   ```jsx
+   ```javascript
    showData = () => {
    	alert(this.input1.value)
    }
@@ -499,7 +500,7 @@ ReactDOM.render(<Person name="Alcie" age={18} sex="女" />, document.getElementB
 
    对于内敛的`ref`会在组件更新时调用两次，第一的参数为`null`，第二次的参数为当前节点，如果不想要调用两次，需要将方法绑定在类上
 
-   ```jsx
+   ```html
    <div>
        <h2>今天天气很{this.state.isHot ? "炎热" : "凉爽"}</h2>
        <button onClick={this.showData}>点我获取天气</button>&nbsp;
@@ -508,7 +509,7 @@ ReactDOM.render(<Person name="Alcie" age={18} sex="女" />, document.getElementB
 
    方法
 
-   ```jsx
+   ```javascript
    state ={
    	isHot: false
    }
@@ -529,7 +530,7 @@ ReactDOM.render(<Person name="Alcie" age={18} sex="女" />, document.getElementB
 
    创建`jsx`结构
 
-   ```jsx
+   ```html
    <div>
        <input type="text" ref={this.myRef} placeholder="点击按钮提示数据"/>
        <button onClick={this.showData} ref="btn">点我提示左侧的数据</button>&nbsp;
@@ -554,7 +555,7 @@ ReactDOM.render(<Person name="Alcie" age={18} sex="女" />, document.getElementB
 
 2. 当发生事件的`DOM`与要操作的`DOM`相同时，可以省略`ref`通过`event.target`得到发生事件的`DOM`元素对象
 
-   ```jsx
+   ```javascript
    <input onBlur={this.showData} type="text" placeholder="失去焦点提示数据"/>
    showData = (event) => {
    	alert(event.target.value)
@@ -569,7 +570,7 @@ ReactDOM.render(<Person name="Alcie" age={18} sex="女" />, document.getElementB
 
    现用现取
 
-   ```jsx
+   ```javascript
    class Login extends React.Component{
    
        handleSubmit = (event) => {
@@ -594,7 +595,7 @@ ReactDOM.render(<Person name="Alcie" age={18} sex="女" />, document.getElementB
 
    将需要的信息存储在`state`中
 
-   ```jsx
+   ```javascript
    class Login extends React.Component{
    
        // 初始化状态
@@ -944,7 +945,7 @@ graph TD
 
 2. 使用
 
-   ```jsx
+   ```javascript
    import React, { Component } from 'react'
    import axios from 'axios'
    
@@ -1201,7 +1202,7 @@ npm install react-router-dom
 4. 展示区写`Route`标签路径的匹配`<Route path='/xxx' component={Demo} />`
 5. `<App />`的最外层包裹一个`<BrowserRouter>`或`<HashRouter>`
 
-```jsx
+```javascript
 import {Link, BrowserRouter, Route} from "react-router-dom"
 
 
@@ -1294,7 +1295,7 @@ import {Link, BrowserRouter, Route} from "react-router-dom"
 
 **精准匹配**
 
-```jsx
+```javascript
 <Route path="/home/test" component={Home}/>
 ```
 
@@ -1318,7 +1319,7 @@ import {Link, BrowserRouter, Route} from "react-router-dom"
 
 被`Switch`包裹的`Route`可以实现只匹配第一个成功的路由
 
-```jsx
+```javascript
 <Switch>
     {/* 注册路由 */}
     <Route path="/about" component={About}/>
@@ -1349,7 +1350,7 @@ import {Link, BrowserRouter, Route} from "react-router-dom"
 
    路由路径使用`:xxx`来传递参数
 
-   ```jsx
+   ```javascript
    render() {
        return (
            <div>
@@ -1382,7 +1383,7 @@ import {Link, BrowserRouter, Route} from "react-router-dom"
 
    `search`参数就相当于`query`参数，以`?`开始，`&`符分割
 
-   ```jsx
+   ```javascript
    <Link to={`/home/message/detail/?id=${msg.id}&title=${msg.title}`}>{msg.title}</Link>
    
    {/* search参数无需声明接受 */}
@@ -1401,7 +1402,7 @@ import {Link, BrowserRouter, Route} from "react-router-dom"
 
    `state`参数不会展示在地址栏中
 
-   ```jsx
+   ```javascript
    <Link to={{pathname: '/home/message/detail', state: {id: msg.id, title: msg.title}}}>{msg.title}</Link>
    
    {/* state参数无需声明接受 */}
@@ -1419,7 +1420,7 @@ import {Link, BrowserRouter, Route} from "react-router-dom"
 
 `react-router-dom`利用的是浏览器的`history`的`push`与`replace`默认为`push`，`Link`中提供属性`replace={true}`来进行切换到`replace`模式
 
-```jsx
+```javascript
 <Link replace={true} to='xxx'>xxx</Link>
 ```
 
@@ -1429,7 +1430,7 @@ import {Link, BrowserRouter, Route} from "react-router-dom"
 
 1. `replace`手动导航
 
-   ```jsx
+   ```javascript
    <button onClick={this.replaceShow(msg.id, msg.title)}>replace查看</button>
    replaceShow = (id, title) => {
        // 实现跳转到Detail组件，且为replace跳转
@@ -1441,7 +1442,7 @@ import {Link, BrowserRouter, Route} from "react-router-dom"
 
 2. `push`手动导航
 
-   ```jsx
+   ```javascript
    <button onClick={this.pushShow(msg.id, msg.title)}>push查看</button>
    pushShow = (id, title) => {
        // 实现跳转到Detail组件，且为push跳转
@@ -1453,7 +1454,7 @@ import {Link, BrowserRouter, Route} from "react-router-dom"
 
 对于`params`和`search`不同的参数传递，使用不同的路径即可，`state`参数需要在`replace`或`push`的第二个参数中传递
 
-```jsx
+```javascript
 <button onClick={this.pushShow(msg.id, msg.title)}>push查看</button>
 pushShow = (id, title) => {
     // push跳转，携带params参数
@@ -1467,7 +1468,7 @@ pushShow = (id, title) => {
 
 1. `goBack`回退
 
-   ```jsx
+   ```javascript
    <button onClick={this.back}>回退</button>
    back = () => {
    	this.props.history.goBack()
@@ -1476,7 +1477,7 @@ pushShow = (id, title) => {
 
 2. `goForward`前进
 
-   ```jsx
+   ```javascript
    <button onClick={this.forward}>前进</button>
    forward = () => {
    	this.props.history.goForward()
@@ -1485,7 +1486,7 @@ pushShow = (id, title) => {
 
 3. `go`根据传递的参数的值来进行回退或前进
 
-   ```jsx
+   ```javascript
    <button onClick={this.go}>go</button>
    go =() => {
        // 回退两步
@@ -1499,7 +1500,7 @@ pushShow = (id, title) => {
 
 `withRouter`是`react-dom-router`提供的一个函数，通过`withRouter`包裹的一般组件称为路由组件
 
-```jsx
+```javascript
 import {withRouter} from 'react-router-dom'
 
 class Header extends Component {
@@ -1555,7 +1556,7 @@ export default withRouter(Header)
 
 2. 使用
 
-   ```jsx
+   ```javascript
    import React, { Component } from 'react'
    
    // 导入需要的组件
@@ -1741,7 +1742,7 @@ export default withRouter(Header)
 
    使用
 
-   ```jsx
+   ```javascript
    import {createStore} from 'redux'
    import reducer from './reducers'
    const store = createStore(reducer)
@@ -1820,7 +1821,7 @@ export default withRouter(Header)
 
 5. 在`index.js`中检测`store`中状态的改变，一旦发生改变重新渲染`<App />`
 
-   ```jsx
+   ```javascript
    import React from 'react'
    import ReactDOM from 'react-dom'
    
@@ -1839,7 +1840,7 @@ export default withRouter(Header)
    
 6. `Count`组件
 
-   ```jsx
+   ```javascript
    export default class Count extends Component {
    
        // 加操作
@@ -2069,7 +2070,7 @@ export default withRouter(Header)
 
 7. 在引入`Count`组件中改为，引入`container`中的`Count`并传入`store`
 
-   ```jsx
+   ```javascript
    import React, { Component } from 'react'
    
    // 引入容器组件
@@ -2266,13 +2267,13 @@ export default withRouter(Header)
 
 1. 通过`React`的`lazy`函数配合`import()`函数动态加载路由组件 ===> 路由组件代码会被分开打包
 
-   ```jsx
+   ```javascript
    const Login = lazy(()=>import('@/pages/Login'))
    ```
 
 2. 通过`<Suspense>`指定在加载得到路由打包文件前显示一个自定义`loading`界面
 
-   ```jsx
+   ```javascript
    <Suspense fallback={<h1>loading.....</h1>}>
        <Switch>
            <Route path="/xxx" component={Xxxx}/>
@@ -2388,7 +2389,7 @@ export default withRouter(Header)
 
 2. 渲染子组时，外面包裹`xxxContext.Provider`, 通过`value`属性给后代组件传递数据
 
-   ```jsx
+   ```javascript
    <xxxContext.Provider value={数据}>
    	子组件
    </xxxContext.Provider>
@@ -2405,7 +2406,7 @@ export default withRouter(Header)
 
    第二种方式: 函数组件与类组件都可以
 
-   ```jsx
+   ```javascript
    <xxxContext.Consumer>
        {
            value => ( // value就是context中的value数据
