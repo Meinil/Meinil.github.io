@@ -72,7 +72,7 @@ module.exports = {
         vssueConfig: {
             platform: 'github-v4',
             owner: 'SchrodingerSeeCat',
-            repo: 'https://github.com/SchrodingerSeeCat/comment',
+            repo: 'comment',
             clientId: '56c5af38a94daefe3515',
             clientSecret: '3fa50e00f7687da3857ca9473837e6dbb0769e22',
         }
