@@ -75,6 +75,11 @@ module.exports = {
             repo: 'comment',
             clientId: '56c5af38a94daefe3515',
             clientSecret: '3fa50e00f7687da3857ca9473837e6dbb0769e22',
-        }
+        },
+        // 全局搜索
+        // algolia: {
+        //     apiKey: 'a65a7834a1981ea416dd8d8bd4d365ef',
+        //     indexName: 'blog'
+        // }
      }
   }
