@@ -2,6 +2,20 @@ module.exports = {
     title: '薛定谔see猫',
     // 主题
     theme: 'reco',
+    // 头信息
+    head: [
+        ['meta', { charset: 'UTF-8', version: '1'}],
+        ['meta', { name: 'description', content: '个人博客'}],
+        ['meta', { 'http-equiv': 'X-UA-Compatible', content: 'IE=edge'}],
+        ['meta', { name: 'viewport', content: 'width=device-width,initial-scale=1,user-scalable=no' }],
+        ['meta', { name: 'Keywords', content: '个人博客, 薛定谔see猫,程序员,java'}]
+    ],
+    // 网页默认语言
+    locales: {
+        '/': {
+            lang: 'zh', // 将会被设置为 <html> 的 lang 属性
+        }
+    },
     // 插件
     plugins: [
         // 渲染mermaid
@@ -46,10 +60,6 @@ module.exports = {
         lastUpdated: 'Last Updated',
         // 头像
         authorAvatar: '/assets/img/logo.jpg',
-        // 移动端优化
-        head: [
-            ['meta', { name: 'viewport', content: 'width=device-width,initial-scale=1,user-scalable=no' }]
-        ],
         // 博客配置
         blogConfig: {
             subSidebar: 'auto',
