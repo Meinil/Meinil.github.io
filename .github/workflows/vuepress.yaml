@@ -12,7 +12,7 @@ jobs:
     - uses: actions/checkout@v1
     - run: npm ci # 相当于npm install
     - run: npm run build
-
+    - run: curl -H 'Content-Type:text/plain' --data-binary @urls.txt "http://data.zz.baidu.com/urls?site=https://schrodingerseecat.github.io&token=WBpd2VwmX0CjmevI"
     #发布到blog/gh-pages 查看https://mybells.github.io/MyBlog/，需要修改base配置为MyBlog，修改图片路径
     # - name: Deploy blog/gh-pages
     #   uses: peaceiris/actions-gh-pages@v2
