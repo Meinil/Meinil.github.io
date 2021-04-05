@@ -795,7 +795,7 @@ OSI模型：国际标准模型
 
 **连续ARQ协议+滑动窗口协议**
 
-![image-20210215133613005](https://gitee.com/dingwanli/picture/raw/master/20210403131655.png)
+<img src="https://gitee.com/dingwanli/picture/raw/master/20210403131655.png" style="zoom:60%;" />
 
 **选择性确认**
 
@@ -826,7 +826,7 @@ OSI模型：国际标准模型
 
 #### 4.4.5 TCP拥塞控制
 
-![image-20210218084340217](https://gitee.com/dingwanli/picture/raw/master/20210403131914.png)
+<img src="https://gitee.com/dingwanli/picture/raw/master/20210403131914.png" style="zoom:60%;" />
 
 **拥塞控制**
 
