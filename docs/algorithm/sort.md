@@ -1,5 +1,5 @@
 ---
-title: C++
+title: 十大排序算法
 date: '2021-04-05'
 sidebar: 'auto'
 categories:
