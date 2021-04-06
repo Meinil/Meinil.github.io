@@ -9,7 +9,9 @@ tags:
  - 排序
 ---
 
-## 十大排序算法
+<img src="https://gitee.com/dingwanli/picture/raw/master/20210406225135.png" style="zoom:80%;" />
+
+<!-- more -->
 
 ### 1. 冒泡排序
 
@@ -106,3 +108,94 @@ public void selectSort(int[] array) {
     }
 }
 ```
+
+#### 2.1 复杂度分析
+
+- 选择排序的交换次数少于冒泡排序，平均性能优于冒泡排序
+- 最好、最坏、平均时间复杂度：`O(n^2)`，空间复杂度：`O(1)`，属于稳定排序
+
+### 3. 堆排序
+
+堆排序可以认为是对选择排序的一种优化
+
+1. 对待排序的序列进行原地建大根堆
+
+2. 重复执行以下操作，直到堆的元素数量为1
+
+   交换堆顶元素与尾元素
+
+   堆的元素数量减1
+
+   对0位置进行一次`siftDown`操作
+
+```java
+public class HeadSort {
+    private int heapSize; // 堆的大小
+    private Integer[] array; // 待排序的数组
+
+    public void sort(Integer[] array) {
+        this.array = array;
+        // 原地建堆
+        heapSize = array.length;
+        for(int i = (heapSize >> 1) - 1; i >= 0; i--) {
+            siftDown(i);
+        }
+
+        System.out.println(Arrays.toString(array));
+        while (heapSize > 1) {
+            // 交换堆顶元素和尾部元素
+            swap(0, --heapSize);
+
+            // 对0位置进行siftDown
+            siftDown(0);
+        }
+    }
+
+    private void siftDown(int index) {
+        Integer element = array[index];
+
+        int half = heapSize >> 1;
+        while (index < half) { // index必须是非叶子节点
+            // 默认是左边跟父节点比
+            int childIndex = (index << 1) + 1;
+            Integer child = array[childIndex];
+
+            int rightIndex = childIndex + 1;
+            // 右子节点比左子节点
+            if (rightIndex < heapSize && cmpElements(array[rightIndex], child) > 0) {
+                child = array[childIndex = rightIndex];
+            }
+
+            // 大于等于子节点
+            if (cmpElements(element, child) >= 0) break;
+
+            array[index] = child;
+            index = childIndex;
+        }
+        array[index] = element;
+    }
+    /*
+     * 返回值等于0，两个索引的值相等
+  	 * 返回值小于0，第一个索引值小于第二个索引值
+	 * 返回值大于0，第一个索引值大于第二个索引值
+	 **/
+    private int cmp(int first, int second) {
+        cmpCount++;
+        return array[first] - array[second];
+    }
+
+    // 比较元素
+    private int cmpElements(Integer first, Integer second) {
+        return first - second;
+    }
+    private void swap(int first, int second) {
+        int temp = array[first];
+        array[first] = array[second];
+        array[second] = temp;
+    }
+}
+```
+
+#### 3.1 时间复杂度
+
+最好、最坏、平均时间复杂度：`O(nlogn)`、空间复杂度：`O(1)`，属于不稳定排序
