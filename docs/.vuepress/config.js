@@ -67,10 +67,8 @@ module.exports = {
             {
               transformer: (timestamp, lang) => {
                 // 不要忘了安装 moment
-                // 更改时区
-                timestamp += 28,800,000
                 const moment = require('moment')
-                moment.locale(lang)
+                moment.locale('zh-cn')
                 return moment(timestamp).fromNow()
               }
             }
