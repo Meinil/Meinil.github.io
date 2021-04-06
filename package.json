@@ -18,6 +18,7 @@
     "dependencies": {
         "@vssue/api-github-v3": "^1.4.7",
         "@vssue/vuepress-plugin-vssue": "^1.4.7",
+        "moment": "^2.29.1",
         "vuepress-plugin-helper-live2d": "^1.0.2"
     }
 }

@@ -59,7 +59,22 @@ module.exports = {
                 duration: 1000, // prompt message display time.
                 showInMobile: false // whether to display on the mobile side, default: false.
             }
-        ]
+        ],
+
+        // 最后修改时间
+        [
+            '@vuepress/last-updated',
+            {
+              transformer: (timestamp, lang) => {
+                // 不要忘了安装 moment
+                // 更改时区
+                timestamp += 28,800,000
+                const moment = require('moment')
+                moment.locale(lang)
+                return moment(timestamp).fromNow()
+              }
+            }
+          ]
     ],
     themeConfig: {
         // vuepress-theme-reco主题的类型
@@ -69,7 +84,7 @@ module.exports = {
         // 网站logo
         logo: '/assets/img/logo.jpg',
         // 最后更新时间
-        lastUpdated: 'Last Updated',
+        lastUpdated: '最后修改时间',
         // 头像
         authorAvatar: '/assets/img/logo.jpg',
         // 博客配置

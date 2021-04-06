@@ -87,4 +87,22 @@ public void bubbleSort(int[] array) {
 
 ### 2. 选择排序
 
-从序列中找出最大的元素，然后与最末尾的元素交换位置
+- 从序列中找出最大的元素，然后与最末尾的元素交换位置
+- 执行完一轮后，最末尾的元素就是最大的元素
+- 重复`n-1`次
+
+```java
+public void selectSort(int[] array) {
+    int temp;
+    int maxIndex; // 最大元素的索引
+    for(int end = array.length - 1; end > 0; end--) {
+    	maxIndex = 0;
+        for(int begin = 1; begin <= end; begin++) {
+            if (array[begin] > array[maxIndex]) {
+                maxIndex = begin;
+            }
+        }
+    	array[end] = array[maxIndex];
+    }
+}
+```
