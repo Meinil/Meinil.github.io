@@ -11,7 +11,7 @@ tags:
 ---
 
 ![mybatis-logo](https://gitee.com/dingwanli/picture/raw/master/20210403195740.png)
-
+<!-- more -->
 ## 1. 简介
 
 ### 1.1 什么是MyBatis
