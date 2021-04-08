@@ -10,8 +10,6 @@ tags:
  - 堆
 ---
 
-### 
-
 ## 1. 堆的特点(二叉堆)
 
 - 堆的父节点一定比子节点的值要大(或小)，称为大根堆(或小根堆)
@@ -208,12 +206,12 @@ private void siftDown(int index) {
         // 2. 同时有左右子节点
         int child  = (index << 1) + 1; // 默认为左子节点
 
-        if (compare(element, elements[child]) >= 0) break; // 如果比子节点大，结束循环
-
         // 选出最大子节点
-        if (child < size && compare(elements[child], elements[child + 1]) < 0) {
-        	child++;
+        if (child + 1 < size && compare(elements[child], elements[child + 1]) < 0) {
+            child++;
         }
+
+        if (compare(element, elements[child]) >= 0) break; // 如果比子节点大，结束循环
 
         // 将子节点存放到index
         elements[index] = elements[child];
@@ -243,4 +241,57 @@ public E replace(E element) {
 ```
 
 ## 5. 建堆
+
+给定一个数组，原地建堆
+
+添加一个构造器
+
+```java
+public BinaryHeap(E []elements, Comparator<E> comparator) {
+    super(comparator);
+    if (elements == null || elements.length == 0) {
+    	this.elements = (E[]) new Object[DEFAULT_CAPACITY];
+    } else {
+        // 保存数组
+        this.elements = (E[]) new Object[Math.max(elements.length, DEFAULT_CAPACITY)];
+        for(int i = 0; i < elements.length; i++) {
+        	this.elements[i] = elements[i];
+        }
+        size = elements.length;
+        heapify();
+    }
+}
+```
+
+### 5.1 自上而下的上滤
+
+从堆顶开始，对每一个元素进行上滤，第一个元素没必要进行上滤
+
+时间复杂度`O(nlogn)`
+
+```java
+private void heapify() {
+    // 自上而下上滤
+    for(int i = 1; i < elements.length; i++) {
+    	siftUp(i);
+    }
+}
+```
+
+### 5.2 自下而上的下滤
+
+从堆底的第一个非叶子节点开始读每个元素进行下滤。(叶子节点没必要进行下滤)
+
+时间复杂度`O(n)`
+
+```java
+private void heapify() {
+    // 自下而上的下滤
+    for(int i = (size >> 1) - 1; i >= 0; i--) {
+    	siftDown(i);
+    }
+}
+```
+
+
 
