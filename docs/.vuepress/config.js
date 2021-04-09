@@ -75,7 +75,7 @@ module.exports = {
             {
                 dateOptions:{
                     hour12: false,
-                    // timeZone: 'Asia/Shanghai',
+                    // timeZone: 'GMT+8',
                 },
 
             }

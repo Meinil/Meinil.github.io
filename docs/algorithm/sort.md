@@ -9,7 +9,7 @@ tags:
  - 排序
 ---
 
-<img src="https://gitee.com/dingwanli/picture/raw/master/20210406225135.png" style="zoom:80%;" />
+<img src="https://gitee.com/dingwanli/picture/raw/master/20210406225135.png" style="zoom:70%;" />
 
 <!-- more -->
 
@@ -250,10 +250,67 @@ public class InsertSort<E extends Comparable<E>> extends Sort<E> {
 }
 ```
 
-#### 4.1 时间复杂度
+#### 4.1 第一优化
+
+上面的那种方法，每次比较过后都会进行交换，比较耗费时间，可以考虑将待插入的元素备份，所有比待排序元素大的(升序排序)，都超尾部挪动一个位置，将待插入的元素放到最终合适的位置
+
+```java
+public class InsertSort<E extends Comparable<E>> extends Sort<E> {
+    @Override
+    protected void sort() {
+        for (int begin = 1; begin < array.length; begin++) {
+            int cur = begin;
+            E element = array[begin];
+            while (cur > 0 && cmp(element, array[cur - 1]) < 0) {
+                array[cur] = array[cur - 1];
+                cur--;
+            }
+            array[cur] = element;
+        }
+    }
+}
+```
+
+#### 4.2 第二优化
+
+在元素`element`的插入过程中，可以先使用二分搜索在有序的序列中搜索出合适的位置，再将`element`插入，插入的位置一定是第一个大于当前元素的位置
+
+```java
+public class InsertSort<E extends Comparable<E>> extends Sort<E> {
+    // 二分搜索优化
+    @Override
+    protected void sort() {
+        for (int begin = 1; begin < array.length; begin++) {
+            E element = array[begin];
+            int left = 0, right = begin, mid;
+            // 查找合适的查找位置
+            while (left < right) {
+                mid = (left + right) >> 1;
+                if (cmp(array[mid], element) > 0) {
+                    right = mid;
+                } else {
+                    left = mid + 1;
+                }
+            }
+            // 所有比当前插入元素要小的元素后移一位
+            for (int i = begin; i > left; i--) {
+                array[i] = array[i - 1];
+            }
+            array[left] = element;
+        }
+    }
+}
+```
+
+#### 4.3 时间复杂度
 
 数组`[2, 3, 8, 6, 1]`的逆序对为：`[2, 1]`，`[3, 1]`，`[8, 1]`，`[8, 6]`，`[6, 1]`，共5个逆序对
 
 插入排序的时间复杂度与逆序对的数量成正比关系，最坏情况时间复杂度是`O(n^2)`，如果待排序的数组是有序的，即最好情况的时间复杂度`O(n)`
 
 属于稳定排序
+
+### 5. 归并排序
+
+1. 不断将当前序列平均分割成2个子序列，直到只有一个元素为止
+2. 不断地将2个子序列合并成一个有序序列，直到只剩下一个有序序列
