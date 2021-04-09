@@ -64,13 +64,20 @@ module.exports = {
         // 最后修改时间
         [
             '@vuepress/last-updated',
+            // {
+            //   transformer: (timestamp, lang) => {
+            //     // 不要忘了安装 moment
+            //     const moment = require('moment')
+            //     moment.locale('zh-cn')
+            //     return moment(timestamp).fromNow()
+            //   }
+            // }
             {
-              transformer: (timestamp, lang) => {
-                // 不要忘了安装 moment
-                const moment = require('moment')
-                moment.locale('zh-cn')
-                return moment(timestamp).fromNow()
-              }
+                dateOptions:{
+                    hour12: false,
+                    // timeZone: 'Asia/Shanghai',
+                },
+
             }
           ]
     ],
