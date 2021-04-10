@@ -489,3 +489,101 @@ public class QuickSort<E extends Comparable<E>> extends Sort<E>{
 最坏情况下(轴点元素比其他元素都小，而且其他元素为升序)：`O(n^2)`
 
 属于不稳定的元素
+
+### 7. 希尔排序
+
+- 希尔排序把序列看作一个矩阵，分成`m`列，逐列进行排序
+
+  `m`从某个整数逐渐减为1
+
+  当`m`为1时，整个序列将完全有序
+
+- 矩阵的列数取决于步长序列
+
+  希尔本人给出的步长序列是`n/2^k`，比如n为16时，步长序列是`{1, 2, 4, 8}`
+
+- 希尔排序对每一列使用插入排序进行排序
+
+```java
+public class ShellSort<E extends Comparable<E>> extends Sort<E>{
+    @Override
+    protected void sort() {
+        List<Integer> stepSequence = shellStepSequence(); // 步长序列
+        for (Integer step : stepSequence) {
+            sort(step);
+        }
+    }
+
+    // 分成step进行排序
+    private void sort(int step) {
+        // col第几列
+        for(int col = 0; col < step; col++) {
+            // 插入排序对每一列进行排序
+            for (int begin = col + step; begin < array.length; begin+=step) {
+                int cur = begin;
+                while (cur > col && cmp(cur, cur - step) < 0) {
+                    swap(cur, cur - step);
+                    cur = cur - step;
+                }
+            }
+        }
+    }
+
+    // 生成步长序列
+    private List<Integer> shellStepSequence() {
+        List<Integer> stepSequence = new ArrayList<>();
+        int step = array.length;
+
+        while ((step = (step >> 1)) > 0) {
+            stepSequence.add(step);
+        }
+        return stepSequence;
+    }
+}
+```
+
+#### 7.1 时间复杂度
+
+希尔本人给出的步长序列：最坏情况下时间复杂度为`O(n^2)`
+
+目前已知最好的步长序列，最坏情况时间复杂度是`O(n^(4/3))`
+$$
+(2^k-2^{k/2})+1,k为偶数
+$$
+
+$$
+2^k-6*2^{(k+1)/2}+1,k为奇数
+$$
+
+实现如下
+
+```java
+private List<Integer> shellStepSequence() {
+    List<Integer> stepSequence = new ArrayList<>();
+    int step = 0, k = 0;
+
+    while (true) {
+        if (k % 2 == 0) {
+            int pow = (int) Math.pow(2, k >> 1);
+            step = 1 + 9 * (pow * pow - pow);
+        } else {
+            int pow1 = (int) Math.pow(2, (k - 1) >> 1);
+            int pow2 = (int) Math.pow(2, (k + 1) >> 1);
+            step = 1 + 8 * pow1 * pow2 - 6 * pow2;
+        }
+
+        if (step >= array.length) break;
+        stepSequence.add(step);
+        k++;
+    }
+    return stepSequence;
+}
+```
+
+希尔排序属于不稳定的排序
+
+### 8. 计数排序
+
+以上七个算法都是基于比较的排序，计数排序、桶排序、基数排序不是基于比较的排序。典型的空间换时间。
+
+计数排序适合
