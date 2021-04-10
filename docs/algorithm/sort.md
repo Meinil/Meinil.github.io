@@ -314,3 +314,178 @@ public class InsertSort<E extends Comparable<E>> extends Sort<E> {
 
 1. 不断将当前序列平均分割成2个子序列，直到只有一个元素为止
 2. 不断地将2个子序列合并成一个有序序列，直到只剩下一个有序序列
+
+```java
+public class MergeSort<E extends Comparable<E>> extends Sort<E>{
+    private E[] arr; // 用于合并时使用的临时数组
+
+    @Override
+    protected void sort() {
+        arr = (E []) new Comparable[array.length >> 1];
+        sort(0, array.length);
+    }
+
+    // 归并排序
+    private void sort(int begin, int end) {
+        if (end - begin < 2) return;
+        int mid = (begin + end) >> 1;
+        sort(begin, mid);
+        sort(mid, end);
+
+        merge(begin, mid, end);
+    }
+    // 对[begin, mid)和[mid, end)范围合并成一个有序序列
+    private void merge(int begin, int mid, int end) {
+        int li = 0, le = mid - begin;
+
+        // 备份数组
+        for(int i = li; i < le; i++) {
+            arr[i] = array[begin + i];
+        }
+        while (li < le) {
+            if (mid < end && cmp(arr[li], array[mid]) > 0) {
+                array[begin++] = array[mid++];
+            } else {
+                array[begin++] = arr[li++];
+            }
+        }
+    }
+}
+```
+
+#### 5.1 时间复杂度
+
+归并排序所消耗的时间：`T(n) = 2 * T(n / 2) + O(n)`，经递推推导：`O(nlogn)`。最好最坏都是`O(nlogn)`
+
+空间复杂度：`O(n)`
+
+#### 5.2 常用递推式
+
+| 递推式             | 复杂度   |
+| ------------------ | -------- |
+| T(n) = T(n/2)+O(1) | O(logn)  |
+| T(n)=T(n-1)+O(1)   | O(n)     |
+| T(n)=T(n/2)+O(n)   | O(n)     |
+| T(n)=2*T(n/2)+O(1) | O(n)     |
+| T(n)=2*T(n/2)+O(n) | O(nlogn) |
+| T(n)=T(n-1)+O(n)   | O(n^2)   |
+| T(n)=2*T(n-1)+O(1) | O(2^n)   |
+| T(n)=2*T(n-1)+O(n) | O(2^n)   |
+
+### 6. 快速排序
+
+1. 从序列中选择一个轴点元素`pivot`
+
+   一般选择子序列的`0`位置元素为轴点
+
+2. 利用`pivot`将序列分割成2个子序列
+
+   将小于`pivot`的元素放在`pivot`前面
+
+   将大于`pivot`的元素放在`pivot`后面
+
+   等于`pivot`的元素放在哪都可以
+
+3. 对以`pivot`分割成的子序列进行`1, 2`操作
+
+   直到不能再分割(子序列只剩下一个元素)
+
+```java
+public class QuickSort <E extends Comparable<E>> extends Sort<E>{
+    @Override
+    protected void sort() {
+        sort(0, array.length);
+    }
+
+    private void sort(int begin, int end) {
+        if ((end - begin) < 2) {
+            return;
+        }
+
+        int mid = pivot(begin, end);
+        sort(begin, mid);
+        sort(mid + 1, end);
+    }
+
+    private int pivot(int begin, int end) {
+        E element = array[begin];
+        end--;
+        while (begin < end) {
+            while (begin < end) {
+                // 右边元素大于轴点元素
+                if (cmp(array[end], element) > 0) {
+                    end--;
+                } else {
+                    array[begin++] = array[end];
+                    break;
+                }
+            }
+            while (begin < end) {
+                // 左边的元素小于轴点元素
+                if (cmp(array[begin], element) < 0) {
+                    begin++;
+                } else {
+                    array[end--] = array[begin];
+                    break;
+                }
+            }
+        }
+
+        array[begin] = element;
+        return begin;
+    }
+}
+```
+
+#### 6.1 优化
+
+在寻找轴点的过程中，轴点元素比其他元素都小，而且其他元素为升序。效率最低
+
+```java
+public class QuickSort<E extends Comparable<E>> extends Sort<E>{
+    @Override
+    protected void sort() {
+        sort(0, array.length);
+    }
+
+    private void sort(int begin, int end) {
+        if ((end - begin) < 2) {
+            return;
+        }
+
+        int mid = pivot(begin, end);
+        sort(begin, mid);
+        sort(mid + 1, end);
+    }
+
+    private int pivot(int begin, int end) {
+        // 随机选取一个元素作为轴点
+        swap(begin, begin + (int) (Math.random() * (end - begin)));
+        E element = array[begin];
+        end--;
+        while (begin < end) {
+            while (begin < end && (cmp(array[end], element) > 0)) {
+                // 右边元素大于轴点元素
+                end--;
+            }
+            while (begin < end && (cmp(array[begin], element) < 0)) {
+                // 左边的元素小于轴点元素
+                begin++;
+            }
+            if(begin < end) {
+                swap(begin, end);
+            }
+        }
+        array[begin] = element;
+        return begin;
+    }
+}
+```
+
+#### 6.2 时间复杂度
+
+最好情况下(左右元素比较均匀)：`O(nlogn)`
+
+最坏情况下(轴点元素比其他元素都小，而且其他元素为升序)：`O(n^2)`
+
+属于不稳定的元素
