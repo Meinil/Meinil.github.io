@@ -586,4 +586,162 @@ private List<Integer> shellStepSequence() {
 
 以上七个算法都是基于比较的排序，计数排序、桶排序、基数排序不是基于比较的排序。典型的空间换时间。
 
-计数排序适合
+计数排序适合对一定范围内的**整数**进行排序
+
+核心思想：统计每个整数在序列中出现的次数，进而推导出每个整数在有序序列中的索引
+
+```java
+public class CountingSort extends Sort<Integer> {
+    @Override
+    protected void sort() {
+        // 找出最大值
+        int max = array[0];
+        for(int i = 1; i < array.length; i++) {
+            if (array[i] > max) {
+                max = array[i];
+            }
+        }
+
+        // 存储每个整数出现的位置
+        int[] counts = new int[max + 1];
+        for(int i = 0; i < array.length; i++) {
+            counts[array[i]]++;
+        }
+
+        // 排序
+        for(int i = 0, k = 0; i < counts.length; i++) {
+            while (counts[i] > 0) {
+                array[k++] = i;
+                counts[i]--;
+            }
+        }
+    }
+}
+```
+
+- 这个版本无法对负整数进行排序
+- 浪费内存空间
+- 不稳定排序
+- 只能对正整数进行排序
+
+#### 8.1 优化
+
+1. 求出待排序数组中的最大值`max`与最小值`min`
+2. 创建长度为`[max - min + 1]`长度的`counts`数组
+3. `counts`数组中存储元素所出现的次数，以及当前元素之前有多上元素的和
+
+```java
+public class CountingSort2 extends Sort<Integer> {
+    @Override
+    protected void sort() {
+        // 找出最大值
+        int max = array[0], min = array[0];
+        for(int i = 1; i < array.length; i++) {
+            if (array[i] > max) {
+                max = array[i];
+            }
+            if (array[i] < min) {
+                min = array[i];
+            }
+        }
+
+        // 存储每个整数出现的次数
+        int[] counts = new int[max - min + 1];
+        for(int i = 0; i < array.length; i++) {
+            counts[array[i] - min]++;
+        }
+        // 累加前面的次数
+        for(int i = 1; i < counts.length; i++) {
+            counts[i] += counts[i - 1];
+        }
+
+        // 排序
+        int[] newArray = new int[array.length];
+        for(int i = array.length - 1; i >= 0; i--) {
+            newArray[--counts[array[i] - min]] = array[i];
+        }
+
+        // 将排序好的数组拷贝至原数组
+        for(int i = 0; i < array.length; i++) {
+            array[i] = newArray[i];
+        }
+    }
+}
+```
+
+这个优化解决了第一个版本中出现的问题
+
+#### 8.2 复杂度分析
+
+空间复杂度：`O(n+k)`，k为整数的取值范围
+
+最好、最坏、平均时间复杂度：`O(n+k)`，k为整数的取值范围
+
+属于稳定排序
+
+### 9. 基数排序
+
+基数排序非常适合于整数排序(尤其是非父整数)
+
+执行流程：一次对个位数、十位数、百位数、千位数、万位数...进行排序(从低位到高位)
+
+<img src="https://gitee.com/dingwanli/picture/raw/master/20210411100719.png" alt="继续排序" style="zoom:70%;" />
+
+个位数、十位数、百位数的取值范围都是固定的`0-9`，可以使用计数排序对它们进行排序
+
+```java
+public class RadixSort extends Sort<Integer> {
+    @Override
+    protected void sort() {
+        // 找最大值，确定要进行几次基数排序
+        int max = array[0];
+        for (int i = 1; i < array.length; i++) {
+            if (max < array[i]) {
+                max = array[i];
+            }
+        }
+
+        for(int radix = 1; radix <= max; radix *= 10) {
+            countingSort(radix);
+        }
+    }
+
+    private void countingSort(int radix) {
+        // 存储每个整数出现的次数
+        int[] counts = new int[10];
+        for(int i = 0; i < array.length; i++) {
+            counts[array[i] / radix % 10]++;
+        }
+        // 累加前面的次数
+        for(int i = 1; i < counts.length; i++) {
+            counts[i] += counts[i - 1];
+        }
+
+        // 排序
+        int[] newArray = new int[array.length];
+        for(int i = array.length - 1; i >= 0; i--) {
+            newArray[--counts[array[i] / radix % 10]] = array[i];
+        }
+
+        // 将排序好的数组拷贝至原数组
+        for(int i = 0; i < array.length; i++) {
+            array[i] = newArray[i];
+        }
+    }
+}
+```
+
+#### 9.1 复杂度分析
+
+最好、最坏、平均时间复杂度：`O(d*(n+k))`，d是最大值的位数，k是进制。属于稳定排序
+
+空间复杂度：`O(n+k)`，k是进制
+
+### 10. 桶排序
+
+1. 创建一定数量的桶(数组、链表)
+2. 按照一定的规则，将序列中的元素均匀分配到对应的桶中
+3. 分别对每个桶进行单独排序
+4. 将所有非空桶的元素合并成有序序列
+
+不同的人制定的规则不同，结果也不同
