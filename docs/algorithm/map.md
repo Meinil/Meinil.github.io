@@ -48,19 +48,19 @@ tags:
 #### 2.3 通用接口
 
 ```java
-public interface Graph<V, E> {
-    int edgesSize(); // 边的个数
-    int verticesSize(); // 点的个数
+public abstract class Graph<V, E> {
+    public abstract int edgesSize(); // 边的个数
+    public abstract int verticesSize(); // 点的个数
 
-    void addVertex(V v); // 添加点
-    void addEdge(V from, V to); // 添加边
-    void addEdge(V from, V to, E weight); // 添加边
+    public abstract void addVertex(V v); // 添加点
+    public abstract void addEdge(V from, V to); // 添加边
+    public abstract void addEdge(V from, V to, E weight); // 添加边
 
-    void removeVertex(V v); // 删除点
-    void removeEdge(V from, V to); // 删除边
-    
-    void bfs(V begin); // 从begin开始进行广度优先遍历
-    void dfs(V begin); // 从begin开始进行深度优先遍历
+    public abstract void removeVertex(V v); // 删除点
+    public abstract void removeEdge(V from, V to); // 删除边
+
+    public abstract void bfs(V begin, Predicate<V> consumer); // 从begin开始进行广度优先遍历
+    public abstract void dfs(V begin, Predicate<V> consumer); // 从begin开始进行深度优先遍历
 }
 ```
 
@@ -291,8 +291,8 @@ public void removeEdge(V from, V to) {
 在`Graph`接口中添加两个方法
 
 ```java
-void bfs(V begin, Predicate<V> consumer); // 从begin开始进行广度优先遍历
-void dfs(V begin, Predicate<V> consumer); // 从begin开始进行深度优先遍历
+public abstract void bfs(V begin, Predicate<V> consumer); // 从begin开始进行广度优先遍历
+public abstract void dfs(V begin, Predicate<V> consumer); // 从begin开始进行深度优先遍历
 ```
 
 #### 4.1 广度优先搜索
@@ -435,7 +435,7 @@ ABCDEF 或 ABDCEF
 `Graph`接口中添加方法
 
 ```java
-List<V> topologicalSort(); // 拓扑排序
+public abstract List<V> topologicalSort(); // 拓扑排序
 ```
 
 >  具体实现
@@ -483,14 +483,14 @@ public List<V> topologicalSort() {
 
 <img src="https://gitee.com/dingwanli/picture/raw/master/20210415220206.png" alt="image-20210415220159294" style="zoom:80%;" />
 
-最小生成树：是所有生成树中，总权值最小的那棵(适用于有权的无向连通图)
+最小生成树：是所有生成树中，总权值最小的那棵(适用于有权的**无向连通图**)
 
 求最小生成树的2个经典的算法
 
 - `Prim`算法
 - `Kruskal`算法
 
-#### 6.1 Prim算法
+#### 6.1 Prim算法(加点法)
 
 假设`G=(V,E)`是有权的连通图(无向),`A`是`G`中最小生成树的边集
 
@@ -498,20 +498,163 @@ public List<V> topologicalSort() {
 2. 从集合`S-V`中选取一个最小的且与`S`连通的边，并将`S-V`的节点加入到`S`中
 3. 重复1、2操作
 
-接口中添加新的结构
+`Graph`接口中添加新的结构
 
 ```java
-Set<EdgeInfo<V, E>> mst(); // 最小生成树
+public abstract Set<EdgeInfo<V, E>> mst(); // 最小生成树
 // 边信息
-class EdgeInfo<V, E> {
-    V from;
-    V to;
-    E weight;
+protected static class EdgeInfo<V, E> {
+    private V from;
+    private V to;
+    private E weight;
     public EdgeInfo(V from, V to, E weight) {
         this.from = from;
         this.to = to;
         this.weight = weight;
     }
-}		
+}
+
+// 权重管理
+protected WeightManager<E> weightManager;
+public interface WeightManager<E> {
+    int compare(E w1, E w2); // 比较
+    E add(E w1, E w2); // 相加
+}
+public Graph(WeightManager<E> weightManager) {
+    this.weightManager = weightManager; // 有权图
+}
+public Graph() {} // 无权图
 ```
+
+`ListGraph`添加方法，用于将集合转换为数组，供建小顶堆使用，`Prim`中使用小顶堆来选择最小边，[小顶堆](https://schrodingerseecat.github.io/algorithm/heap.html)
+
+```java
+private Edge<V, E>[] collectionConversionArray(Set<Edge<V, E>> collection) {
+    if (collection.size() == 0) return null;
+    Edge<V, E>[] elements = new Edge[collection.size()];
+    int i = 0;
+    for(Edge<V, E> element : collection) {
+        elements[i++] = element;
+    }
+    return elements;
+}
+```
+
+`ListGraph`中实现比较器
+
+```java
+private Comparator<Edge<V, E>> edgeComparator = (Edge<V, E> e1, Edge<V, E> e2) -> {
+    return -weightManager.compare(e1.weight, e2.weight); // 默认堆是大根堆，所以取负
+};
+```
+
+`Edge<V, E>`中添加方法，用于返回边的信息
+
+```java
+public EdgeInfo<V, E> info() {
+    return new EdgeInfo<>(from.value, to.value, weight);
+}
+```
+
+`prim`算法实现
+
+```java
+private Set<EdgeInfo<V, E>> prim() {
+
+    // 先拿到起始节点
+    Iterator<Vertex<V, E>> iterator = vertices.values().iterator();
+    if (!iterator.hasNext()) return null;
+    Vertex<V, E> vertex = iterator.next();
+    Set<EdgeInfo<V, E>> edgeInfos = new HashSet<>(); // 最终要返回的边的信息
+    Set<Vertex<V, E>> addedVertices = new HashSet<>(); // 已经添加的顶点
+    addedVertices.add(vertex);
+
+    // 将出度边集合转换为数组
+    Edge<V, E>[] edges = collectionConversionArray(vertex.outEdges);
+    BinaryHeap<Edge<V, E>> heap = new BinaryHeap<>(edges, edgeComparator);
+
+    // 最小生成树的边的数量
+    int edgeSize = verticesSize() - 1;
+    while (!heap.isEmpty() && edgeInfos.size() < edgeSize) {
+        Edge<V, E> edge = heap.remove();
+        if (addedVertices.contains(edge.to)) continue; // 要访问的顶点必须未被加入到已访问的节点中
+
+        // 将最小的边放入到边信息中
+        edgeInfos.add(edge.info());
+        addedVertices.add(edge.to);
+
+        // 将to的出度放入到heap中
+        for(Edge<V, E> to : edge.to.outEdges) {
+            heap.add(to);
+        }
+    }
+
+    return edgeInfos;
+}
+```
+
+#### 6.2 Kruskal(加边法)
+
+1. 按照边的权重(从小到大)将边加入到生成树中，直到生成树中含有`V-1`条边为止(V是顶点数量)
+
+   如果加入该边会与生成树形成环，则不加入该边(从第三条边起，才可能会构成环)
+
+2. 判断是否在同会构成环，使用[并查集](https://schrodingerseecat.github.io/algorithm/UnionFind.html)来判断
+
+   如果一条边的起点和终点本身就在同一个集合内，若将这条边添加到最小生成树中一定会构成环
+
+**具体实现**
+
+```java
+private Set<EdgeInfo<V, E>> kruskal() {
+    if(verticesSize() == 0) return null; // 图中没有顶点
+    Set<EdgeInfo<V, E>> edgeInfos = new HashSet<>();
+
+    // 将所有边加入到小顶堆中
+    BinaryHeap<Edge<V, E>> heap = new BinaryHeap<>(setConversionArray(edges), edgeComparator);
+
+    // 创建并查集集合
+    UnionFind<Vertex<V, E>> union = new UnionFind<>();
+    vertices.forEach((V key, Vertex<V, E> value) -> {
+        union.makeSet(value);
+    });
+
+    int edgeSize = verticesSize() - 1;
+    while(!heap.isEmpty() && edgeInfos.size() < edgeSize) {
+        Edge<V, E> edge = heap.remove();
+
+        // 忽略会构成环的边
+        if (union.isSame(edge.from, edge.to)) continue;
+
+        edgeInfos.add(edge.info());
+        union.union(edge.from, edge.to); // 将最小边的两个顶点放入到同一个集合中
+    }
+
+    return edgeInfos;
+}
+```
+
+### 7. 最短路径
+
+最短路径`Shortest Path`：指两顶点之间权值之和最小的路径(有向图、无向图均适用，不能有负权环)
+
+> **有向图**
+
+![image-20210417210724021](https://gitee.com/dingwanli/picture/raw/master/20210417210731.png)
+
+> **无向图**
+
+![image-20210417210821433](https://gitee.com/dingwanli/picture/raw/master/20210417210821.png)
+
+> **最短路径算法**
+
+1. 单源最短路径算法
+
+   `Dijkstra`(迪杰斯特拉算法)
+
+   `Bellman-Ford`(贝尔曼-福特算法)
+
+2. 多源最短路径算法
+
+   `Floyd`(弗洛伊德算法)
 
