@@ -1,6 +1,6 @@
 ---
 title: 图
-date: '2021-04-12'
+date: '2021-04-21'
 sidebar: 'auto'
 categories:
  - 数据结构
@@ -519,6 +519,7 @@ protected WeightManager<E> weightManager;
 public interface WeightManager<E> {
     int compare(E w1, E w2); // 比较
     E add(E w1, E w2); // 相加
+    E zero(); // 零点信息
 }
 public Graph(WeightManager<E> weightManager) {
     this.weightManager = weightManager; // 有权图
@@ -657,4 +658,272 @@ private Set<EdgeInfo<V, E>> kruskal() {
 2. 多源最短路径算法
 
    `Floyd`(弗洛伊德算法)
+
+**松弛操作**，更新两个点之间的路径
+
+#### 7.1 Dijkstra
+
+`Dijkstra`属于单源点最短路径算法：用于计算一个顶点到其他所有顶点的最短路径(不能有负权边)
+
+时间复杂度：可以优化至`O(ElogV)`，`E`是边数，`V`是顶点数
+
+1. 初始化一张表，表中记录着要计算的顶点到其他顶点的最短路径，初始时，直接连接的顶点为边长，间接相连的顶点为无穷大，另外创建一张表，存储已经找到最短路径的点
+2. 从表中选取最小的边的`to`并将其加入到以找到最短路径的点的集合中，找与它相邻的边，如果这条边加上与它相邻的长度小于表中的长度，则进行松弛操作`Relaxation`(即更新两个顶点之间的最短路径)
+3. 重复进行以上的操作
+
+`Graph.java`中添加新的结构，用于保存路径信息
+
+```java
+public static class PathInfo<V, E> {
+    protected E weight;
+    protected List<EdgeInfo<V, E>> edgeInfos = new LinkedList<>();
+	
+    public PathInfo() {}
+    public PathInfo(E weight) {
+        this.weight = weight;
+    }
+    
+    @Override
+    public String toString() {
+        return "PathInfo{" +
+            "weight=" + weight +
+            ", edgeInfos=" + edgeInfos +
+            '}';
+    }
+}
+```
+
+找最小路径
+
+```java
+private Map.Entry<Vertex<V, E>, PathInfo<V, E>> getMinPath(Map<Vertex<V, E>, PathInfo<V, E>> paths) {
+    if (paths == null || paths.size() == 0) return null;
+
+    Iterator<Map.Entry<Vertex<V, E>, PathInfo<V, E>>> iterator = paths.entrySet().iterator();
+    Map.Entry<Vertex<V, E>, PathInfo<V, E>> minEntry = iterator.next();
+
+    while (iterator.hasNext()) {
+        Map.Entry<Vertex<V, E>, PathInfo<V, E>> entry = iterator.next();
+        if (weightManager.compare(entry.getValue().weight, minEntry.getValue().weight) < 0) {
+            minEntry = entry;
+        }
+    }
+    return minEntry;
+}
+```
+
+松弛操作
+
+```java
+private void relaxation(Edge<V, E> edge, PathInfo<V, E> minPath, Map<Vertex<V, E>, PathInfo<V, E>> paths) {
+    // 新的路径
+    E newWeight = weightManager.add(minPath.weight, edge.weight);
+    // 以前的路径，可能没有取出为null
+    PathInfo<V, E> oldPath = paths.get(edge.to);
+
+    if (oldPath != null && weightManager.compare(newWeight, oldPath.weight) >= 0) return;
+
+    if (oldPath == null) {
+        oldPath = new PathInfo<>();
+        paths.put(edge.to, oldPath);
+    } else {
+        oldPath.edgeInfos.clear(); // 清除原本的路径
+    }
+
+    oldPath.weight = newWeight; // 更改权重
+    oldPath.edgeInfos.addAll(minPath.edgeInfos); // 更改路径
+    oldPath.edgeInfos.add(edge.info());
+}
+```
+
+`dijkstra`算法实现
+
+```java
+private Map<V, PathInfo<V, E>> dijkstra(V begin) {
+    Vertex<V, E> vertex = vertices.get(begin);
+    if (vertex == null) return null;
+
+    // 存储各顶点之间的最短路径
+    Map<V, PathInfo<V, E>> selectedPaths = new HashMap<>();
+    Map<Vertex<V, E>, PathInfo<V, E>> paths = new HashMap<>();
+
+    // 初始化
+    paths.put(vertex, new PathInfo<>(weightManager.zero()));
+
+    while (!paths.isEmpty()) {
+        Map.Entry<Vertex<V, E>, PathInfo<V, E>> minEntry = getMinPath(paths);
+        Vertex<V, E> minVertex = minEntry.getKey();
+
+        selectedPaths.put(minVertex.value, minEntry.getValue());
+        paths.remove(minVertex);
+        // 对outEdges进行松弛操作
+        for(Edge<V, E> edge : minVertex.outEdges) {
+            // 如果edge.to已经被选中或者edge.to是vertex，没有必要进行松弛操作
+            if (selectedPaths.containsKey(edge.to.value)) continue;
+            relaxation(edge, minEntry.getValue(), paths);
+        }
+    }
+    selectedPaths.remove(vertex.value);
+    return selectedPaths;
+}
+```
+
+#### 7.2 Bellman-Ford
+
+`Bellman-Ford`也属于单源最短路径算法，支持负权边，还能检测出是否有负权环
+
+- 对所有的边进行`V-1`次松弛操作(V是节点数)，得到所有可能的最短路径
+- 时间复杂度是`O(EV)`，E是边数，V是节点数量
+
+具体实现
+
+```java
+private Map<V, PathInfo<V, E>> bellmanFord(V begin) {
+    Vertex<V, E> vertex = vertices.get(begin);
+    if (vertex == null) return null;
+
+    // 存储各顶点之间的最短路径
+    Map<V, PathInfo<V, E>> selectedPaths = new HashMap<>();
+    selectedPaths.put(begin, new PathInfo<>(weightManager.zero())); // 放入起点信息并赋初值零
+
+    // 松弛的次数
+    int count = vertices.size() - 1;
+    for(int i = 0; i < count; i++) {
+        for (Edge<V, E> edge : edges) {
+            PathInfo<V, E> fromPath = selectedPaths.get(edge.from.value);
+            if (fromPath == null) continue;
+            relaxationForBellmanFord(edge, fromPath, selectedPaths);
+        }
+    }
+
+    for (Edge<V, E> edge : edges) {
+        PathInfo<V, E> fromPath = selectedPaths.get(edge.from.value);
+        if (fromPath == null) continue;
+        if (relaxationForBellmanFord(edge, fromPath, selectedPaths)) {
+            throw new IllegalArgumentException("有负权环"); // 存在负权环，没有最短路径
+        }
+    }
+
+    selectedPaths.remove(begin);
+    return selectedPaths;
+}
+```
+
+松弛操作
+
+```java
+private boolean relaxationForBellmanFord(
+    Edge<V, E> edge,
+    PathInfo<V, E> minPath,
+    Map<V, PathInfo<V, E>> paths) {
+    // 新的路径
+    E newWeight = weightManager.add(minPath.weight, edge.weight);
+    // 以前的路径，可能没有取出为null
+    PathInfo<V, E> oldPath = paths.get(edge.to.value);
+
+    if (oldPath != null && weightManager.compare(newWeight, oldPath.weight) >= 0) return false;
+
+    if (oldPath == null) {
+        oldPath = new PathInfo<>();
+        paths.put(edge.to.value, oldPath);
+    } else {
+        oldPath.edgeInfos.clear(); // 清除原本的路径
+    }
+
+    oldPath.weight = newWeight; // 更改权重
+    oldPath.edgeInfos.addAll(minPath.edgeInfos); // 更改路径
+    oldPath.edgeInfos.add(edge.info());
+    return true;
+}
+```
+
+#### 7.3 Floyd
+
+`Floyd`属于多源最短路径算法，能够求出任意2个顶点之间的最短路径，支持负权边
+
+- 时间复杂度：`O(V^3)`
+
+原理：
+
+- 从任意顶点`i`到任意顶点`j`的**最短**路径有两种情况
+
+  1. 直接从`i`到`j`
+  2. 从`i`经过若干顶点到`j`
+
+- 假设`dist(i, j)`为顶点`i`到顶点`j`的最短路径的距离，对于**每一个**顶点`K`，检查
+  $$
+  dist(i, k)+dist(i,j)<dist(i,j)
+  $$
+  是否成立，成立则更新即
+  $$
+  dist(i,j)=dist(i, k)+dist(i,j)
+  $$
+
+- 当遍历完所有节点`k`，`dist(i, j)`中记录的便是`i`到`j`的最短路径的距离
+
+`Graph.java`中添加新的结构
+
+```java
+public abstract Map<V, Map<V, PathInfo<V, E>>> shortestPath();
+```
+
+具体实现
+
+```java
+public Map<V, Map<V, PathInfo<V, E>>> shortestPath() {
+    Map<V, Map<V, PathInfo<V, E>>> paths = new HashMap<>();
+    // 初始化
+    for (Edge<V, E> edge : edges) {
+        Map<V, PathInfo<V, E>> map = paths.get(edge.from.value);
+        if (map == null) {
+            map = new HashMap<>();
+            paths.put(edge.from.value, map);
+        }
+
+        PathInfo<V, E> pathInfo = new PathInfo<>(edge.weight);
+        pathInfo.edgeInfos.add(edge.info());
+        map.put(edge.to.value, pathInfo);
+    }
+
+    vertices.forEach((V v2, Vertex<V, E> vertex2) -> {
+        vertices.forEach((V v1, Vertex<V, E> vertex1) -> {
+            vertices.forEach((V v3, Vertex<V, E> vertex3) -> {
+                if (v1.equals(v2) || v2.equals(v3) || v1.equals(v3)) return;
+
+                // v1 -> v2
+                PathInfo<V, E> path1 = getPathInfo(v1, v2, paths);
+                if (path1 == null) return;
+
+                // v2 -> v3
+                PathInfo<V, E> path2 = getPathInfo(v2, v3, paths);
+                if (path2 == null) return;
+
+                // v1 -> v3
+                PathInfo<V, E> path3 = getPathInfo(v1, v3, paths);
+
+                E newWeight = weightManager.add(path1.weight, path2.weight);
+                if (path3 != null && weightManager.compare(newWeight, path3.weight) > 0) return;
+
+                if (path3 == null) { // 原本Map中不存在
+                    path3 = new PathInfo<>();
+                    paths.get(v1).put(v3, path3);
+                } else {
+                    path3.edgeInfos.clear();
+                }
+
+                // 更新路径信息
+                path3.weight = newWeight;
+                path3.edgeInfos.addAll(path1.edgeInfos);
+                path3.edgeInfos.addAll(path2.edgeInfos);
+            });
+        });
+    });
+
+    return paths;
+}
+private PathInfo<V, E> getPathInfo(V from, V to, Map<V, Map<V, PathInfo<V, E>>> paths) {
+    Map<V, PathInfo<V, E>> map = paths.get(from);
+    return map == null ? null : map.get(to);
+}
+```
 

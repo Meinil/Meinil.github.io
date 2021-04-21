@@ -1,4 +1,11 @@
 module.exports = {
+    // 数学公式渲染
+    markdown: {
+        config: md => {
+          md.set({html: true})
+          md.use(require("markdown-it-katex"))
+        }
+    },
     title: '薛定谔see猫',
     // 主题
     theme: 'reco',
@@ -9,7 +16,9 @@ module.exports = {
         ['meta', { name: 'description', content: '个人博客'}],
         ['meta', { 'http-equiv': 'X-UA-Compatible', content: 'IE=edge'}],
         ['meta', { name: 'viewport', content: 'width=device-width,initial-scale=1,user-scalable=no' }],
-        ['meta', { name: 'Keywords', content: '个人博客, 薛定谔see猫,程序员,java'}]
+        ['meta', { name: 'Keywords', content: '个人博客, 薛定谔see猫,程序员,java'}],
+        ['link', { rel: 'stylesheet', href: 'https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.7.1/katex.min.css' }],
+        ['link', { rel: "stylesheet", href: "https://cdnjs.cloudflare.com/ajax/libs/github-markdown-css/2.10.0/github-markdown.min.css" }]
     ],
     // 网页默认语言
     locales: {
@@ -112,10 +121,5 @@ module.exports = {
             clientId: '56c5af38a94daefe3515',
             clientSecret: '3fa50e00f7687da3857ca9473837e6dbb0769e22',
         },
-        // 全局搜索
-        // algolia: {
-        //     apiKey: 'a65a7834a1981ea416dd8d8bd4d365ef',
-        //     indexName: 'blog'
-        // }
-     }
-  }
+    }
+}
