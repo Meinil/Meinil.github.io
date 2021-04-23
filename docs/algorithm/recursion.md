@@ -150,4 +150,58 @@ private static void move(int num, String from, String to) {
 
 ### 4. 递归转非递归
 
-递归调用的过程中，会将每一次调用的参数、局部变量都保存在了对应的栈帧`Stack Frame`中
+- 递归调用的过程中，会将每一次调用的参数、局部变量都保存在了对应的栈帧`Stack Frame`中
+
+- 递归深度较大，会占用比较多的栈空间，甚至导致栈溢出
+- 有些时候，递归会存在大量的重复计算，性能非常差
+
+递归`100%`可以转成非递归
+
+> **万能方法**
+
+自己手动维护一个栈用于保存中间变量，来替代函数调用栈(空间复杂度并未得到优化)
+
+> **相同变量保存栈帧内容**
+
+在某些时候，也可以使用一组相同的变量来保存每个栈帧的内容
+
+### 5. 尾调用
+
+尾调用：一个函数的最后一个动作是调用函数
+
+```java
+public void test1(int n){
+    int a = 10;
+    int b = a + 20;
+    test2(b);
+}
+```
+
+如果最后一个动作是调用自身，称为**尾递归**
+
+```java
+public void test3(int n){
+    if (n < 0) return;
+    test3(n - 1);
+}
+```
+
+一些编译器能对尾调用进行优化，以达到节省栈空间的目的
+
+<img src="https://gitee.com/dingwanli/picture/raw/master/20210423114345.png" alt="image-20210423114338904" style="zoom:50%;" />
+
+`JVM`会消除尾递归里的尾调用，但不会消除一般的尾调用(凡是递归调用，尽量写成尾递归的形式)
+
+阶乘尾递归形式
+
+```java
+public static int fac(int n) {
+    return fac(n, 1);
+}
+
+private static int fac(int n, int result) {
+    if (n <= 1) return result;
+    return fac(n - 1, result * n);
+}
+```
+
