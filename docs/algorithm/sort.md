@@ -10,7 +10,6 @@ tags:
 ---
 
 <img src="https://gitee.com/dingwanli/picture/raw/master/20210406225135.png" style="zoom:70%;" />
-
 <!-- more -->
 
 **所有排序算法的父类**

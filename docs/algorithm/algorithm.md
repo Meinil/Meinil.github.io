@@ -160,3 +160,37 @@ public int maxNum(int capacity,  int[] treasure) {
 #### 2.2 0-1背包
 
 有n件物品和一个最大承重为W的背包，每件物品的重量`wi`·，价值是`vi`，在保证总重量不超过W的前提下，将哪几件物品装入背包，可以使背包的价值最大？(每个物品只能选或不选，不能多选)
+
+> **贪心方法解决**
+
+1. 价值贪心，优先把价值最高的物品放进背包
+2. 重量贪心，优先把重量最轻的放进背包
+3. 性价比贪心，优先把单位价值最高的物品放进背包
+
+分析可知，性价比贪心正确
+
+> **具体实现**
+
+1. 定义一个内部类，
+
+   ```java
+   public class Knapsack {
+       public static class Article {
+           private int weight; // 重量
+           private int value; // 价值
+           private double valueDensity; // 性价比
+   
+           public Article(int weight, int value) {
+               this.weight = weight;
+               this.value = value;
+               valueDensity = value * 1.0 / weight;
+           }
+   
+           public double getValueDensity() {
+               return valueDensity;
+           }
+       }
+   }
+   ```
+
+2. 

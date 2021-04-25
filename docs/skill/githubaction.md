@@ -1,5 +1,5 @@
 ---
-title: Github Action部署Vue3
+title: Github Action
 date: '2021-04-24'
 sidebar: 'auto'
 categories:
@@ -7,6 +7,12 @@ categories:
 tags:
  - 技能
 ---
+
+:::tip
+本篇文章使用github action自动构建一个Vue3项目，并发布至github pages
+:::
+
+<!-- more -->
 
 ### 1. 创建仓库
 
@@ -33,7 +39,7 @@ tags:
 
 3. 启动测试
 
-   ```
+   ```shell
    npm run dev
    ```
 
@@ -56,7 +62,7 @@ export default defineConfig({
 
 ### 4. 更改打包命令
 
-这步是可选的，如果引入`element-plus`的话，默认的打包方式会报错
+这步是可选的，仅对于项目中引入`element-plus`的项目而言，因为如果引入`element-plus`的话，默认的打包方式会报错
 
 打开`package.json`，修改`build`命令
 
@@ -124,10 +130,10 @@ jobs:
         uses: actions/checkout@v2.3.1
 
       # 编译
-      - name: Build
+      - name: Build 🔧
         run: npm install && npm run build
 
-      - name: Deploy
+      - name: Deploy 🚀
         # 构建发布 Github pages
         uses: JamesIves/github-pages-deploy-action@4.1.1
         # 该步骤所需的环境变量
@@ -155,4 +161,4 @@ git push
 
 <img src="https://gitee.com/dingwanli/picture/raw/master/20210424123345.png" alt="image-20210424122821303" style="zoom:50%;" />
 
-<img src="https://gitee.com/dingwanli/picture/raw/master/20210424123457.png" alt="image-20210424123457844" style="zoom:50%;" />
+<img src="https://gitee.com/dingwanli/picture/raw/master/20210424123457.png" alt="image-20210424123457844" style="zoom:40%;" />
