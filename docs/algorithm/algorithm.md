@@ -193,4 +193,262 @@ public int maxNum(int capacity,  int[] treasure) {
    }
    ```
 
-2. 
+2. 贪心实现
+
+   ```java
+   // articles要装的物品
+   // capacity背包的容量
+   public List<Article> knapsack(
+       Article[] articles,
+       int capacity,
+       Comparator<Article> comparator) {
+       Arrays.sort(articles, comparator); // 排序
+       System.out.println(Arrays.toString(articles));
+       List<Article> list = new LinkedList<>(); // 保存添加的物品的信息
+   
+       int weight = 0; // 已经装载的重量
+       int value = 0; // 已经装载的物品的价值
+       for (Article article : articles) {
+           if ((article.weight + weight) > capacity) {
+               continue;
+           }
+   
+           weight += article.weight;
+           value += article.value;
+           list.add(article);
+       }
+       return list;
+   }
+   ```
+
+### 3. 分治
+
+分治`Divide And Conquer`，分而治之
+
+1. 将原问题分解成若干个规模较小的子问题(子问题和原问题的结构一样，只是规模不一样)
+2. 子问题又不断分解成规模更小的子问题，直至不能再分解(可以轻易计算出子问题的解)
+3. 利用子问题的解推导出原问题的解
+
+>  **主定理**
+
+解决规模为n的问题，分解为a个规模为`n/b`的子问题，然后在`O(n^d)`时间内将子问题的解合并
+
+算法运行时间
+$$
+T(n) = a\times T(\frac{n}{b})+O(n^d),a>0,b>0,d\geq0
+$$
+时间复杂度：
+$$
+d>log_ba,T(n)=O(n^d)
+$$
+
+$$
+d=log_ba,T(n)=O(n^dlog_n)
+$$
+
+$$
+d<log_ba,T(n)=O(n^{log_ba})
+$$
+
+#### 3.1 最大连续子序列和
+
+[力扣题目](https://leetcode-cn.com/problems/maximum-subarray/)给定一个长度为`n`的整数序列，求它的最大连续子序列和
+
+```
+[-2, 1, -3, 4, -1, 2, 1, -5, 4]
+4+(-1)+2+1=6
+```
+
+> **暴力解法**
+
+```java
+public int maxSubArray(int[] nums) {
+    if (nums == null || nums.length == 0) return 0;
+
+    int max = Integer.MIN_VALUE;
+    for (int begin = 0; begin < nums.length; begin++) {
+        int sum = 0;
+        for (int end = begin; end < nums.length; end++) {
+            sum += nums[end];
+            max = Math.max(max, sum);
+        }
+    }
+    return max;
+}
+```
+
+时间复杂度：`O(n^2)`
+
+> **分治**
+
+1. 将序列均匀地分割成2个子序列
+
+   ```shell
+   [begin, end) = [begin, mid] + [mid, end), mid = (begin + end) >> 1
+   ```
+
+2. 假设问题的解是`S[i,j)`，那么问题的解有3中可能
+
+   `[i,j)`存在于`[begin,mid)`中
+
+   `[i,j)`存在于`mid,end`中
+
+   `[i,j)`一部分存在于`[begin,mid)`中，另一部分存在于`[mid,end)`中
+
+   ```java
+   public int maxSubArray(int[] nums) {
+       if (nums == null || nums.length == 0) return 0;
+       return maxSubArray(nums, 0, nums.length);
+   }
+   public int maxSubArray(int[] nums, int begin, int end) {
+       // 如果只有一个元素，那最大序列和就是这个元素本身
+       if (end - begin < 2) return nums[begin];
+       int mid = (begin + end) >> 1;
+   
+       // 求出横跨左右两边的子序列最大值的和
+       int leftMax = Integer.MIN_VALUE, leftNum = 0;
+       for (int i = mid - 1; i >= begin; i--) {
+           leftNum += nums[i];
+           if (leftMax < leftNum) leftMax = leftNum;
+       }
+       int rightMax = Integer.MIN_VALUE, rightNum = 0;
+       for (int i = mid; i < end; i++) {
+           rightNum += nums[i];
+           if (rightMax < rightNum) rightMax = rightNum;
+       }
+   
+       return Math.max(
+           Math.max(maxSubArray(nums, begin, mid), maxSubArray(nums, mid, end)),
+           leftMax + rightMax);
+   }
+   ```
+
+3. 复杂度分析
+
+   空间复杂度：`O(logn)`，时间复杂度：`O(nlogn)`
+
+### 4. 动态规划
+
+动态规划`Dynamic Programming`，用于求解最优问题的一种常用策略
+
+#### 4.1 零钱兑换
+
+[零钱兑换](https://leetcode-cn.com/problems/coin-change/)，假设现在有`25`分、`20`分、`5`分、`1`分的硬币，现要找给客户`41`分的零钱，如何办到硬币个数最少
+
+> **求解过程**
+
+假设`dp(n)`是凑到`n`分需要的最少硬币个数
+
+- 如果第一次选择了`25`分的硬币，那么
+
+$$
+dp(n)=dp(n-25)+1
+$$
+
+- 如果第一次选择了`20`分的硬币，那么
+
+$$
+dp(n)=dp(n-20)+1
+$$
+
+- 如果第一次选择了`5`分的硬币，那么
+
+$$
+dp(n)=dp(n-5)+1
+$$
+
+- 如果第一次选择了`1`分的硬币，那么
+
+$$
+dp(n)=dp(n-1)+1
+$$
+
+- 综上应该是
+
+$$
+dp(n)=min\{dp(n-25),dp(n-20),dp(n-1)\}+1
+$$
+
+> **暴力递归**
+
+```java
+public int coins(int n) {
+    if (n <= 0) return Integer.MAX_VALUE;
+    if (n == 25 || n == 20 || n == 5 || n ==1) return 1;
+
+    return Math.min(
+        Math.min(coins(n - 25), coins(n - 20)),
+        Math.min(coins(n - 5), coins(n - 1))) + 1;
+}
+```
+
+存在大量重复计算，效率底下
+
+> **记忆化搜索**
+
+```java
+public int coins(int n) {
+    if (n <= 0) return -1;
+    int[] dp = new int[n + 1]; // 保存已经求出的硬币数
+    
+    // 初始化
+    int[] faces = {1, 5, 20, 25};
+    for(int face : faces) {
+        if (face > n) break;
+        dp[face] = 1;
+    }
+    return coins(n, dp);
+}
+private int coins(int n, int[] dp) {
+    if (n < 1) return Integer.MAX_VALUE;
+    if (dp[n] == 0) {
+        dp[n] = Math.min(
+            Math.min(coins(n - 25, dp), coins(n - 20, dp)),
+            Math.min(coins(n - 5, dp), coins(n - 1, dp))
+        ) + 1;
+    }
+    return dp[n];
+}
+```
+
+自顶向下的调用
+
+> **动态规划**
+
+```java
+public int coins(int n){
+    if (n < 1) return -1;
+    int[] dp = new int[n + 1];
+    for (int i = 1; i <= n; i++) {
+        int min = dp[i - 1];
+        if (i >= 5) min = Math.min(dp[i - 5], min);
+        if (i >= 20) min = Math.min(dp[i - 20], min);
+        if (i >= 25) min = Math.min(dp[i - 25], min);
+        dp[i] = min + 1;
+    }
+    return dp[n];
+}
+```
+
+时间复杂度：`O(n)`、空间复杂度：`O(n)`
+
+> **最终优化**
+
+```java
+public int coinChange(int[] coins, int amount) {
+    if (amount < 1 || coins == null || coins.length == 0) {
+        return -1;
+    }
+    int[] dp = new int[amount + 1];
+    for(int i = 1; i <= amount; i++) {
+        int min = Integer.MAX_VALUE;
+        for (int coin : coins) {
+            if (i < coin) continue;
+            min = Math.min(dp[i - coin], min);
+        }
+        dp[i] = min + 1;
+    }
+    return dp[amount];
+}
+```
+
