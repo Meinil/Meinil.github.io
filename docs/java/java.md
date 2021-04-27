@@ -46,7 +46,7 @@ tags:
        public static void main(String[] args){
            MyThread t1 = new MyThread();
            t1.start();
-           for(int i = 1; i <= 100; i++){
+           for(int i = 1; i <= 10; i++){
                if(i % 2 != 0) {
                    System.out.printf("MainThread: %d\n", i);
                }
@@ -57,7 +57,7 @@ tags:
    class MyThread extends Thread{
        @Override
        public void run() {
-           for(int i = 1; i <= 100; i++){
+           for(int i = 1; i <= 10; i++){
                if(i % 2 == 0) {
                    System.out.printf("MyThread: %d\n", i);
                }
@@ -74,103 +74,13 @@ tags:
    MainThread: 5
    MainThread: 7
    MainThread: 9
-   MainThread: 11
-   MainThread: 13
-   MainThread: 15
-   MainThread: 17
-   MainThread: 19
-   MainThread: 21
-   MainThread: 23
-   MainThread: 25
-   MainThread: 27
-   MainThread: 29
-   MainThread: 31
-   MainThread: 33
-   MainThread: 35
-   MainThread: 37
-   MainThread: 39
-   MainThread: 41
-   MainThread: 43
    MyThread: 2
    MyThread: 4
-   MainThread: 45
-   MainThread: 47
-   MainThread: 49
-   MainThread: 51
-   MainThread: 53
-   MainThread: 55
-   MainThread: 57
-   MainThread: 59
-   MainThread: 61
-   MainThread: 63
-   MainThread: 65
-   MainThread: 67
-   MainThread: 69
-   MainThread: 71
-   MainThread: 73
    MyThread: 6
    MyThread: 8
    MyThread: 10
-   MainThread: 75
-   MainThread: 77
-   MainThread: 79
-   MainThread: 81
-   MainThread: 83
-   MainThread: 85
-   MainThread: 87
-   MainThread: 89
-   MainThread: 91
-   MainThread: 93
-   MainThread: 95
-   MainThread: 97
-   MainThread: 99
-   MyThread: 12
-   MyThread: 14
-   MyThread: 16
-   MyThread: 18
-   MyThread: 20
-   MyThread: 22
-   MyThread: 24
-   MyThread: 26
-   MyThread: 28
-   MyThread: 30
-   MyThread: 32
-   MyThread: 34
-   MyThread: 36
-   MyThread: 38
-   MyThread: 40
-   MyThread: 42
-   MyThread: 44
-   MyThread: 46
-   MyThread: 48
-   MyThread: 50
-   MyThread: 52
-   MyThread: 54
-   MyThread: 56
-   MyThread: 58
-   MyThread: 60
-   MyThread: 62
-   MyThread: 64
-   MyThread: 66
-   MyThread: 68
-   MyThread: 70
-   MyThread: 72
-   MyThread: 74
-   MyThread: 76
-   MyThread: 78
-   MyThread: 80
-   MyThread: 82
-   MyThread: 84
-   MyThread: 86
-   MyThread: 88
-   MyThread: 90
-   MyThread: 92
-   MyThread: 94
-   MyThread: 96
-   MyThread: 98
-   MyThread: 100
    ```
-
+   
 5. `start()`一个对象只能调用一次
 
 6. `Thread`中常用的方法

@@ -90,7 +90,7 @@ tags:
                <transactionManager type="JDBC"/>
                <dataSource type="POOLED">
                    <property name="driver" value="com.mysql.cj.jdbc.Driver"/>
-                   <property name="url" value="jdbc:mysql://localhost:3306/mybatis?useSSL=true&amp;useUnicode=true&amp;characterEncoding=UTF-8"/>
+                   <property name="url" value="jdbc:mysql://localhost:3306/mybatis?useSSL=true&amp;useUnicode=true&amp;characterEncoding=UTF-8&amp;serverTimezone=Asia/Shanghai"/>
                    <property name="username" value="root"/>
                    <property name="password" value="123456"/>
                </dataSource>
@@ -383,7 +383,7 @@ mybatis-config.xml
 
 1. `UserMapper`添加方法
 
-   ```
+   ```java
    User getUserByIdMap(Map<String, Object> map);
    ```
 

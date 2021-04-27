@@ -1818,7 +1818,7 @@ public class MyRegisterConfig {
 
 2. 创建一个配置类`MyDataSourceConfig.java`
 
-   ```
+   ```java
    @Configuration
    public class MyDataSourceConfig {
    
@@ -1886,7 +1886,7 @@ public class MyRegisterConfig {
    spring:
        datasource:
            driver-class-name: org.mariadb.jdbc.Driver
-           url: jdbc:mysql://192.168.1.103:3306/test
+           url: jdbc:mysql://localhost:3308/test?useSSL=true&useUnicode=true&characterEncoding=UTF-8&serverTimezone=Asia/Shanghai
            username: root
            password: 123456
    

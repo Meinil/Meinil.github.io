@@ -432,12 +432,10 @@ public String test(@PathVariable int a,@PathVariable int b, Model model) {
 
    编写控制器
 
-   ```
+   ```java
+   // URL
    // http://localhost:8080/s4/object?id=1&name=haha&age=18
-   ```
-
-   ```
-   @RequestMapping("/object")
+@RequestMapping("/object")
    public String test1(User user) {
        // 前端返回对象
        System.out.println(user);
@@ -445,7 +443,7 @@ public String test(@PathVariable int a,@PathVariable int b, Model model) {
        return "test";
    }
    ```
-
+   
    前端传递的参数名和对象的属性名需要一致，匹配不到的字段为类型零值
 
 ### 5.2 数据回显前端
