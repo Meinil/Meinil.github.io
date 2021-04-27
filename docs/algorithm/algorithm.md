@@ -331,7 +331,39 @@ public int maxSubArray(int[] nums) {
 
 动态规划`Dynamic Programming`，用于求解最优问题的一种常用策略
 
-#### 4.1 零钱兑换
+> **基本分析流程**
+
+1. 暴力递归(自顶向下，出现了重叠子问题)
+2. 记忆化搜索(自顶向下)
+3. 递推(迭代，自底向上)
+
+#### 4.1 基本概念
+
+> **解题步骤**
+
+1. 定义状态(状态是原问题、子问题的解)
+
+   比如定义`dp[i]`的含义
+
+2. 设置初始状态(边界)
+
+   比如设置`dp(0)`的值
+
+3. 确定状态转移方程
+
+   比如确定`dp(i)`和`dp(i - 1)`的关系
+
+对于能够使用动态规划解决的问题，通常具备两个特点
+
+1. 最优子结构(最优化原理)：通过求解子问题的最优解，可以获得原问题的最优解
+
+2. 无后效性
+
+   某阶段的状态一旦确定，则此后过程的演变不再受此前各状态及决策的影响(未来与过去无关)
+
+   在推导后面阶段的状态时，只关心前面阶段的具体状态值，不关心这个状态是怎么一步步推导出来的
+
+#### 4.2 最少零钱兑换
 
 [零钱兑换](https://leetcode-cn.com/problems/coin-change/)，假设现在有`25`分、`20`分、`5`分、`1`分的硬币，现要找给客户`41`分的零钱，如何办到硬币个数最少
 
@@ -366,7 +398,7 @@ $$
 - 综上应该是
 
 $$
-dp(n)=min\{dp(n-25),dp(n-20),dp(n-1)\}+1
+dp(n)=min\{dp(n-25),dp(n-20),dp(n-5),dp(n-1)\}+1
 $$
 
 > **暴力递归**
@@ -436,6 +468,7 @@ public int coins(int n){
 
 ```java
 public int coinChange(int[] coins, int amount) {
+    if (amount == 0) return 0;
     if (amount < 1 || coins == null || coins.length == 0) {
         return -1;
     }
@@ -444,11 +477,214 @@ public int coinChange(int[] coins, int amount) {
         int min = Integer.MAX_VALUE;
         for (int coin : coins) {
             if (i < coin) continue;
-            min = Math.min(dp[i - coin], min);
+            if ( dp[i - coin] >= min || dp[i - coin] < 0) continue;
+            min = dp[i - coin];
         }
-        dp[i] = min + 1;
+        if (min == Integer.MAX_VALUE) {
+            dp[i] = -1;
+        } else {
+            dp[i] = min + 1;
+        }
     }
     return dp[amount];
 }
 ```
 
+#### 4.3 最大连续子序列和
+
+题目与分治中解决的问题相同，[最大连续子序列和](#3.1 最大连续子序列和)：但解法不同
+
+> **状态定义**
+
+假设`dp(i)`是以`nums[i]`结尾的最大连续子序列和(`nums`是整个序列)
+
+- 以`nums[0]`即`-2`结尾的最大连续子序列是`-2`，所以`dp(0)=-2`
+- 以`nums[1]`即`1`结尾的最大连续子序列是`1`，所以`dp(1)=1`
+- 以`nums[2]`即`-3`结尾的最大连续子序列是`1、-3`，所以`dp(2)=dp(1)+(-3)=-2`
+- 以`nums[3]`即`4`结尾的最大连续子序列是`4`，所以`dp(3)=4`
+- 以`nums[4]`即`-1`结尾的最大连续子序列是`4、-1`，所以`dp(4)=dp(3)+(-1)=3`
+- 以`nums[5]`即`2`结尾的最大连续子序列是`4、-1、2`，所以`dp(5)=dp(4)+(2)=5`
+- 以`nums[6]`即`1`结尾的最大连续子序列是`4、-1、2`，所以`dp(6)=dp(5)+(1)=6`
+- 以`nums[7]`即`-5`结尾的最大连续子序列是`4、-1、2、1、-5`，所以`dp(7)=dp(6)+(-5)=1`
+- 以`nums[8]`即`4`结尾的最大连续子序列是`4、-1、2、1、-5、4`，所以`dp(8)=dp(7)+(4)=5`
+
+> **转移方程**
+
+$$
+dp[n]=max\{dp[n-1]+nums[n],nums[n]\},n>0
+$$
+
+> **具体实现**
+
+```java
+public int maxSubArray(int[] nums) {
+    if (nums == null || nums.length == 0) return Integer.MIN_VALUE;
+    if (nums.length == 1) return nums[0];
+    int[] dp = new int[nums.length];
+    dp[0] = nums[0]; // 初始状态
+    int max = dp[0];
+    for (int i = 1; i < nums.length; i++) {
+        dp[i] = Math.max(dp[i - 1] + nums[i], nums[i]);
+        if (dp[i] > max) {
+            max = dp[i];
+        }
+    }
+    return max;
+}
+```
+
+时间复杂度：`O(n)`，空间复杂度：`O(n)`
+
+空间复杂度可以优化至`O(n)`
+
+```java
+public int maxSubArray(int[] nums) {
+    if (nums == null || nums.length == 0) return Integer.MIN_VALUE;
+    if (nums.length == 1) return nums[0];
+
+    int dp = nums[0], max = nums[0];
+    for (int i = 1; i < nums.length; i++) {
+        dp = Math.max(dp + nums[i], nums[i]);
+        if (dp > max) {
+            max = dp;
+        }
+    }
+    return max;
+}
+```
+
+#### 4.4 最长上升子序列
+
+[力扣题目](https://leetcode-cn.com/problems/longest-increasing-subsequence/)：给定一个无序的整数序列，求出它最长上升子序列的长度(要求严格上升)
+
+比如
+
+```
+[10, 2, 2, 5, 1, 7, 101, 18]
+[2, 5, 6, 101]和[2, 5, 7, 18]长度为4
+```
+
+> **定义状态**
+
+`dp(i)`是以`nums[i]`结尾的最长上升子序列的长度
+
+- 以`nums[0]`即`-10`结尾的最长上升子序列是`10`，所以`dp(0)=1`
+- 以`nums[1]`即`2`结尾的最长上升子序列是`2`，所以`dp(1)=1`
+- 以`nums[2]`即`2`结尾的最长上升子序列是`2`，所以`dp(2)=1`
+- 以`nums[3]`即`5`结尾的最长上升子序列是`2、5`，所以`dp(3)=dp(2)+1=2`
+- 以`nums[4]`即`1`结尾的最长上升子序列是`1`，所以`dp(4)=1`
+- 以`nums[5]`即`7`结尾的最长上升子序列是`2、5、7`，所以`dp(5)=d(3)+1=3`
+- 以`nums[6]`即`101`结尾的最长上升子序列是`2、5、7、101`，所以`dp(6)=d(5)+1=4`
+- 以`nums[7]`即`18`结尾的最长上升子序列是`2、5、7、18`，所以`dp(7)=d(5)+1=4`
+
+> **状态转移方程**
+
+$$
+dp[i]=max\{dp[0],dp[1]...dp[i-1]\}+1
+$$
+
+> **具体实现**
+
+```java
+public int lengthOfLIS(int[] nums) {
+    if (nums == null || nums.length == 0) return 0;
+    int[] dp = new int[nums.length];
+    int max = dp[0] = 1;
+    for (int i = 1; i < nums.length; i++) {
+        dp[i] = 1; // 初始化
+        for (int j = 0; j < i; j++) {
+            if (nums[i] > nums[j] ) {
+                dp[i] = Math.max(dp[j] + 1, dp[i]);
+            }
+        }
+        max = Math.max(dp[i], max);
+    }
+    return max;
+}
+```
+
+时间复杂度：`O(n^2)`，空间复杂度：`O(n)`
+
+#### 4.5 最长公共子序列
+
+[最长公共子序列](https://leetcode-cn.com/problems/longest-common-subsequence/)`Longest Common Subsequence, LCS`：求两个序列的最长公共子序列长度
+
+```
+[1,3,5,9,10]和[1,4,9,10]
+最长公共子序列为[1,9,10]，长队为3
+```
+
+> **定义状态**
+
+假设2个序列分别是`nums1`、`nums2`，
+$$
+i\in[0,nums1.length],j\in[0,nums2.length]
+$$
+假设`dp(i,j)`是`nums1`前`i`个元素与`nums2`前`j`个元素的最长公共子序列的长度，最后要返回的值为`dp(i,j)`
+
+- 初始值`dp(i,0)`、`dp(0,j)`初始值均为`0`
+
+> **状态转移方程**
+
+1. 如果`nums1[i-1]=nums2[j-1]`,
+   $$
+   dp(i,j)=dp(i-1,j-1)+1
+   $$
+
+2. 如果`nums1[i-1]!=nums2[j-1]`
+   $$
+   dp(i,j)=max(dp(i-1,j),dp(i,j-1))
+   $$
+
+> **具体实现**
+
+```java
+public int lcs(int[] nums1, int[] nums2) {
+    if (nums1 == null || nums1.length == 0) return 0;
+    if (nums2 == null || nums2.length == 0) return 0;
+    int[][] dp = new int[nums1.length + 1][nums2.length + 1];
+
+    for (int i = 1; i <= nums1.length; i++) {
+        for (int j = 1; j <= nums2.length; j++) {
+            if (nums1[i - 1] == nums2[j - 1]) {
+                dp[i][j] = dp[i - 1][j - 1] + 1;
+            } else {
+                dp[i][j] = Math.max(dp[i - 1][j], dp[i][j - 1]);
+            }
+        }
+    }
+
+    return dp[nums1.length][nums2.length];
+}
+```
+
+时间复杂度：`n*m`，空间复杂度：`n*m`
+
+> **空间优化**
+
+```java
+public int lcs(int[] nums1, int[] nums2) {
+    if (nums1 == null || nums1.length == 0) return 0;
+    if (nums2 == null || nums2.length == 0) return 0;
+    int[] dp = new int[nums2.length + 1];
+
+    for (int i = 1; i <= nums1.length; i++) {
+        int cur = 0;
+        for (int j = 1; j <= nums2.length; j++) {
+            int leftTop = cur; // 保存左上角的值
+            cur = dp[j];
+            if (nums1[i - 1] == nums2[j - 1]) {
+                dp[j] = leftTop + 1;
+            } else {
+                dp[j] = Math.max(dp[j], dp[j - 1]);
+            }
+        }
+    }
+
+    return dp[nums2.length];
+}
+```
+
+时间复杂度：`n*m`，空间复杂度：`n`
+
+#### 4.6 最长公共子串

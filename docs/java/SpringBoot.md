@@ -567,6 +567,11 @@ Key: value
 2. 新建`Person.java`
 
    ```java
+   @Component
+   @Data
+   @NoArgsConstructor
+   @AllArgsConstructor
+   @ConfigurationProperties(prefix = "person")
    public class Person {
        private String userName;
        private Boolean boos;
