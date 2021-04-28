@@ -626,7 +626,7 @@ $$
 
 > **状态转移方程**
 
-1. 如果`nums1[i-1]=nums2[j-1]`,
+1. 如果`nums1[i-1]==nums2[j-1]`,
    $$
    dp(i,j)=dp(i-1,j-1)+1
    $$
@@ -688,3 +688,121 @@ public int lcs(int[] nums1, int[] nums2) {
 时间复杂度：`n*m`，空间复杂度：`n`
 
 #### 4.6 最长公共子串
+
+求两个字符串的最长公共子串产妇
+
+```
+ABCBA和BABCA的最长公共子串是ABC，长度为3
+```
+
+> **定义状态**
+
+假设2个字符串分别是`str1`、`str2`
+$$
+i\in[1,str1.length],j\in[1,str2.lenght]
+$$
+假设`dp(i,j)`是以`str1[i-1]`、`str2[j-1]`结尾的最长公共子串长度，初始值：`dp(i,0)`、`dp(0,j)`初始值均为0
+
+> **状态转移方程**
+
+1. 如果`str1[i-1]==str2[j-1]`
+   $$
+   dp(i,j)=dp(i-1,j-1)+1
+   $$
+
+2. 如果`str[i-1]!=str2[j-1]`
+   $$
+   dp(i,j)=0
+   $$
+
+3. 求出的结果就是`Max(dp(i, j))`
+
+> **具体实现**
+
+```java
+public int maxSubStr(String str1, String str2) {
+    if (str1 == null || str2 == null) return 0;
+    if (str1.length() == 0 || str2.length() == 0) return 0;
+
+    char[] chars1 = str1.toCharArray();
+    char[] chars2 = str2.toCharArray();
+
+    int[][] dp = new int[chars1.length + 1][chars2.length + 1];
+    int max = 0;
+    for(int i = 1; i < chars1.length; i++) {
+        for (int j = 1; j < chars2.length; j++) {
+            if (chars1[i - 1] == chars2[j - 1]) {
+                dp[i][j] = dp[i - 1][j - 1] + 1;
+                if (dp[i][j] > max) max = dp[i][j];
+            }
+        }
+    }
+
+    return max;
+}
+```
+
+时间复杂度：`O(n*m)`，空间复杂度：`O(n*m)`
+
+空间复杂度优化：`O(n)`
+
+```java
+public int maxSubStr(String str1, String str2) {
+    if (str1 == null || str2 == null) return 0;
+    if (str1.length() == 0 || str2.length() == 0) return 0;
+    if (str1.length() < str2.length()) {
+        return maxSubStr(str2, str1);
+    }
+
+    char[] chars1 = str1.toCharArray();
+    char[] chars2 = str2.toCharArray();
+
+    int[] dp = new int[chars2.length + 1];
+    int max = 0;
+    for(int i = 1; i < chars1.length; i++) {
+        int cur = 0;
+        for (int j = 1; j < chars2.length; j++) {
+            int leftTop = cur;
+            cur = dp[j];
+            if (chars1[i - 1] == chars2[j - 1]) {
+                dp[j] = leftTop + 1;
+                if (dp[j] > max) max = dp[j];
+            } else {
+                dp[j] = 0;
+            }
+        }
+    }
+
+    return max;
+}
+```
+
+#### 4.7 0-1背包
+
+有n件物品和一个最大承重为`W`的背包，每件物品的重量是`wi`、价值是`vi`，在保证总重量不超过`W`的前提下，选择某些物品装入背包，背包的最大总价值是多少?(每件物品只能选择0件或者1件)
+
+> **定义状态**
+
+假设`values`是价值数组，假设`weights`是重量数组，`capacity`背包容量
+
+假设`dp(i,j)`是最大承重为`j`、有前`i`件物品可选时的最大总价值，`dp(i,0)`、`dp(0,j)`初始值均为0，问题的解为`dp(n,capacity)`
+$$
+i\in[0,n],j\in[0,W]
+$$
+
+> **状态转移方程**
+
+如果不选择第`i`个物品
+$$
+dp(i,j)=dp(i-1,j)
+$$
+如果选择第`i`个物品
+$$
+dp(i,j)=values[i]+dp(i-1,j-weights[i])
+$$
+总的`dp`
+$$
+dp(i,j)=\{dp(i,j)=dp(i-1,j),values[i]+dp(i-1,j-weights[i])\}
+$$
+
+
