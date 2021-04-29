@@ -787,22 +787,65 @@ public int maxSubStr(String str1, String str2) {
 
 假设`dp(i,j)`是最大承重为`j`、有前`i`件物品可选时的最大总价值，`dp(i,0)`、`dp(0,j)`初始值均为0，问题的解为`dp(n,capacity)`
 $$
-i\in[0,n],j\in[0,W]
+i\in[1,n],j\in[1,W]
 $$
 
 > **状态转移方程**
 
 如果不选择第`i`个物品
 $$
-dp(i,j)=dp(i-1,j)
+dp(i,j)=dp(i-1,j),j<weights[i-1]
 $$
 如果选择第`i`个物品
 $$
-dp(i,j)=values[i]+dp(i-1,j-weights[i])
+dp(i,j)=values[i-1]+dp(i-1,j-weights[i-1]),j\geq weights[i-1]
 $$
 总的`dp`
 $$
-dp(i,j)=\{dp(i,j)=dp(i-1,j),values[i]+dp(i-1,j-weights[i])\}
+dp(i,j)=max\{dp(i-1,j),values[i]+dp(i-1,j-weights[i])\}
 $$
 
+> **具体实现**
+
+```java
+public int maxValue(int[] values, int[] weights, int capacity) {
+    if (values == null || values.length == 0) return 0;
+    if (weights == null || weights.length == 0) return 0;
+    if (values.length != weights.length) return 0;
+    if (capacity <= 0) return 0;
+
+    int[][] dp = new int[values.length + 1][capacity + 1];
+    for (int i = 1; i <= values.length; i++) {
+        for (int j = 1; j <= capacity; j++) {
+            if (j < weights[i - 1]) {
+                dp[i][j] = dp[i - 1][j]; // 已经超出背包的容量,不选
+            } else {
+                dp[i][j] = Math.max(dp[i - 1][j], values[i - 1] + dp[i - 1][j - weights[i - 1]]);
+            }
+        }
+    }
+    return dp[values.length][capacity];
+}
+```
+
+空间复杂度：`O(n*m)`，时间复杂度：`O(n*m)`
+
+> **优化**
+
+```java
+public int maxValue(int[] values, int[] weights, int capacity) {
+    if (values == null || values.length == 0) return 0;
+    if (weights == null || weights.length == 0) return 0;
+    if (values.length != weights.length) return 0;
+    if (capacity <= 0) return 0;
+
+    int[] dp = new int[capacity + 1];
+    for (int i = 1; i <= values.length; i++) {
+        for (int j = capacity; j >= weights[i - 1]; j--) {
+            dp[j] = Math.max(dp[j], values[i - 1] + dp[j - weights[i - 1]]);
+        }
+    }
+    return dp[capacity];
+}
+```
 
