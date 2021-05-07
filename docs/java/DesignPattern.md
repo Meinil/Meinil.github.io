@@ -9,7 +9,7 @@ tags:
  - 设计模式
 ---
 
-## 1. 设计模式
+## 1. 概述
 
 ### 1.1 设计模式的目的
 
@@ -19,9 +19,21 @@ tags:
 4. 可靠性强：增减新功能，对原来的功能没有影响
 5. 高内聚、低耦合
 
+设计模式共分三类，23种
+
+1. 创建型模式：**单例模式**、抽象工厂模式、原型模式、建造者模式、**工厂模式**
+2. 结构型模式：适配器模式、桥接模式、**装饰模式**、组合模式、外观模式、享元模式、**代理模式**
+3. 行为型模式：模板方法模式、命令模式、访问者模式、迭代器模式、**观察者模式**、中介者模式、备忘录模式、解释器模式、状态模式、策略模式、职责链模式
+
 ### 1.2 UML类图
 
 `UML`：统一建模语言，是一种用于软件系统分析和设计的语言工具，它用于帮助软件开发人员进行思考和记录思路的结果
+
+> **分类**
+
+1. 用例图
+2. 静态结构图：**类图**、对象图、包图、组件图、部署图
+3. 动态行为图：交互图(时序图与协作图)、状态图、活动图
 
 #### 1.2.1 基本含义
 
@@ -31,13 +43,276 @@ classA --|> classB : 泛化(继承)
 classC --* classD : 组合
 classE --o classF : 聚合
 classG -- classH : 关联
-classH --> classJ : 关联
+classI --> classJ : 关联
 classK ..> classL : 依赖
 classM ..|> classN : 实现
 classO .. classP : Link(Dashed)
 ```
 
+`UML`类图可以用来表示类本身，以及类和类之间的联系
 
+类和类之间的联系包括：依赖、泛化(继承)、实现、关联、聚合与组合
+
+#### 1.2.2 类图示例
+
+```java
+public class Person {
+    private Integer id;
+    private String name;
+
+    public String getName() {
+        return name;
+    }
+    
+    public void setName(String name) {
+        this.name = name;
+    }
+}
+```
+
+```mermaid
+classDiagram
+class Person {
+	-id: Interger
+	-name: String
+	+getName() String
+	+setName(String name)
+}
+```
+
+#### 1.2.3 依赖
+
+只要在一个类中用到了另外的类，就会构成依赖关系，主要有以下几种情况
+
+1. 类中用到了对方
+2. 类的的成员属性
+3. 方法的返回类型
+4. 方法的参数类型
+5. 方法中使用的局部变量
+
+有以下依赖关系
+
+```java
+class PersonDao {}
+class Person {}
+class IDCard {}
+class Department {}
+
+public class PersonServiceBean {
+    private PersonDao personDao;
+    public void save(Person person) {}
+    public IDCard getIDCard(Integer id) {
+        return null;
+    }
+    public void modify() {
+        Department department = new Department();
+    }
+}
+```
+
+对于`PersonServiceBean`这个类来说，它就依赖了其余的四个类
+
+```mermaid
+classDiagram
+class PersonDao {
+	
+}
+class Person {
+	
+}
+class IDCard {
+	
+}
+class Department {
+	
+}
+class PersonServiceBean {
+	-personDao: PersonDao
+	+save(Person person) void
+	+getIDCard(Integer id) IDCard
+	+modify() void
+}
+PersonServiceBean ..> PersonDao
+PersonServiceBean ..> Person
+PersonServiceBean ..> IDCard
+PersonServiceBean ..> Department
+```
+
+#### 1.2.4 泛化(继承)
+
+有以下关系
+
+```java
+abstract class DaoSupport {
+    public void save(Object entity) {}
+    public void delete(Object id) {}
+}
+public class PersonServiceBean extends DaoSupport{}
+```
+
+```mermaid
+classDiagram
+class DaoSupport {
+	+save(Object entity) void
+	+delete(Object id) void
+}
+class PersonServiceBean {
+	
+}
+DaoSupport <|-- PersonServiceBean
+```
+
+泛化关系就是继承关系
+
+#### 1.2.5 实现
+
+有以下关系
+
+```java
+interface PersonService {
+    public void delete(Integer id);
+}
+public class PersonServiceImpl implements PersonService{
+    @Override
+    public void delete(Integer id) { }
+}
+```
+
+```mermaid
+classDiagram
+class PersonService {
+	<<interface>>
+	+delete(Integer id) void
+}
+class PersonServiceImpl {
+	+delete(Integer id) void
+}
+PersonService <|-- PersonServiceImpl
+```
+
+#### 1.2.6 关联
+
+关联具有导航性：即双向关系或单向关系。
+
+关系具有多重性：一对一、一对多、多对一
+
+**单向多对一**
+
+```java
+public class Person{
+	private IDCard card;
+}
+public class IDCard{}
+```
+
+```mermaid
+classDiagram
+class Person {
+	-card: IDCard
+}
+class IDCard {
+	
+}
+Person --> IDCard
+```
+
+**双向一对一**
+
+```java
+public class Person{
+	private IDCard card;
+}
+public class IDCard{
+	private Person person;
+}
+```
+
+```mermaid
+classDiagram
+class Person {
+	-card: IDCard
+}
+class IDCard {
+	-person: Person
+}
+Person -- IDCard
+```
+
+#### 1.2.7 聚合
+
+聚合关系表示的是整体和部分的关系，整体与部分可以分开。聚合关系是关联关系的特例，所以它具有关联关系的导航性与多重性
+
+> **示例**
+
+```java
+class Mouse {
+}
+class Monitor {
+}
+
+public class Computer {
+    private Monitor monitor;
+    private Mouse mouse;
+
+    public void setMonitor(Monitor monitor) {
+        this.monitor = monitor;
+    }
+
+    public void setMouse(Mouse mouse) {
+        this.mouse = mouse;
+    }
+}
+```
+
+```mermaid
+classDiagram
+class Mouse {
+	
+}
+class Monitor {
+	
+}
+class Computer {
+	-monitor: Monitor
+	-mouse: Mouse
+	+setMonitor(Monitor monitor) void
+    +setMouse(Mouse mouse) void
+}
+Computer o-- Mouse
+Computer o-- Monitor
+```
+
+#### 1.2.8 组合
+
+对于[1.2.7](#1.2.7 聚合)的例子，如果认为`Mouse`、`Monitor`和`Computer`是不可分离的，则为组合关系。
+
+```java
+class Mouse {
+}
+class Monitor {
+}
+
+public class Computer {
+    private Monitor monitor = new Monitor();
+    private Mouse mouse = new Mouse();
+}
+```
+
+```mermaid
+classDiagram
+class Mouse {
+	
+}
+class Monitor {
+	
+}
+class Computer {
+	-monitor: Monitor
+	-mouse: Mouse
+}
+Computer *-- Mouse
+Computer *-- Monitor
+```
 
 ### 1.3 七大原则
 
@@ -536,5 +811,404 @@ class B {
 	+setA(A a)
 }
 A o-- B
+```
+
+## 2. 单例模式
+
+类的单例设计模式，就是采取一定的方法保证在整个的软件系统中，对某个类只能存在一个对象实例，并且该类就只提供一个取得其对象实例的方法(静态方法)
+
+应用场景：需要频繁的进行创建和销毁的对象，创建对象时耗时过多或耗费资源过多，但又经常用到的对象，工具类对象、频繁访问数据库或文件的对象
+
+### 2.1 饿汉式
+
+#### 2.2.1 静态常量
+
+1. 构造器私有化
+2. 类的内部创建对象实例
+3. 提供一个共有的静态方法，返回实例对象
+
+```java
+public class Singleton {
+    private Singleton() {}
+    
+    private final static Singleton instance = new Singleton();
+
+    public static Singleton getInstance() {
+        return instance;
+    }
+}
+```
+
+> **优缺点**
+
+- 优点：这种写法比较简单，就是在类装载的时候就完成实例化，避免线程同步问题
+- 缺点：在类装载时就完成实例化，没有达到懒加载的效果，如果没有使用过这个实例，则会造成内存的浪费
+- 这种方式基于`classloader`机制避免了多线程的同步问题
+
+#### 2.1.2 静态代码块
+
+```java
+class Singleton {
+    private final static Singleton instance;
+    
+    private Singleton() {}
+    static {
+        instance = new Singleton();
+    }
+    public static Singleton getInstance() {
+        return instance;
+    }
+}
+```
+
+与[静态常量](#2.2.1 静态常量)的方式类似，只不过将实例化的过程放在了静态代码块中
+
+### 2.3 懒汉式
+
+#### 2.2.1 线程不安全
+
+```java
+public class Singleton {
+    private static Singleton instance;
+    
+    private Singleton() {}
+    public static Singleton getInstance() {
+        if (instance == null) {
+            instance = new Singleton();
+        }
+        return instance;
+    }
+}
+```
+
+> **优缺点**
+
+- 有懒加载效果，但是只能在单线程下使用
+- 不推荐使用
+
+#### 2.2.2 线程安全
+
+```java
+public class Singleton {
+    private static Singleton instance;
+    
+    private Singleton() {}
+    public static synchronized Singleton getInstance() {
+        if (instance == null) {
+            instance = new Singleton();
+        }
+        return instance;
+    }
+}
+```
+
+> **优缺点**
+
+- 解决了线程不安全的问题
+- 效率底下，不推荐使用
+
+#### 2.2.3 双重检查
+
+```java
+class Singleton {
+    private static volatile Singleton instance;
+    
+    private Singleton() {}
+    public static Singleton getInstance() {
+        if (instance == null) {
+            synchronized (Singleton.class) {
+                if (instance == null) {
+                    instance = new Singleton();
+                }
+            }
+        }
+        return instance;
+    }
+}
+```
+
+> **优缺点**
+
+- 既保证了线程安全，又保证了效率
+- 推荐使用:star:
+
+#### 2.2.4 静态内部类
+
+```java
+class Singleton {
+    private Singleton() {}
+
+    private static class SingletonInstance {
+        private final static Singleton INSTANCE = new Singleton();
+    }
+
+    public static Singleton getInstance() {
+        return SingletonInstance.INSTANCE;
+    }
+}
+```
+
+> **优缺点**
+
+- 静态内部类不会应为类的装载而装载，只会在使用到它的时候进行装载，且类的装载是线程安全的
+- 效率高，推荐使用:star:
+
+#### 2.2.5 枚举
+
+```java
+enum Singleton {
+    INSTANCE;
+}
+```
+
+> **优缺点**
+
+- 枚举能够避免多线程同步问题，而且还能防止反序列化重新对象
+- 推荐使用:star:
+
+## 3. 工厂模式
+
+一个披萨制作的例子：
+
+```mermaid
+graph LR
+准备原材料 --> 烘烤 --> 切片 --> 打包
+```
+
+```mermaid
+classDiagram
+class Pizza {
+	#name: String
+	+prepare() void
+	+bake() void
+	+cut() void
+	+box() void
+}
+class CheessPizza {
+	+prepare() void
+}
+class GreekPizza {
+	+prepare() void
+}
+class OrderPizza {
+	+OrderPizza() void
+}
+Pizza <|-- CheessPizza
+OrderPizza ..> CheessPizza
+OrderPizza ..> Pizza
+OrderPizza ..> GreekPizza
+Pizza <|-- GreekPizza
+```
+
+客户会使用订单类`OrderPizza`来订购不同的披萨
+
+**具体的类编写**
+
+1. 披萨类
+
+   ```java
+   public abstract class Pizza {
+       protected String name;
+   
+       public abstract void prepare();
+       public void bake() {
+           System.out.println(name + "baking");
+       }
+       public void cut() {
+           System.out.println(name + "cutting");
+       }
+       public void box() {
+           System.out.println(name + "boxing");
+       }
+       public void setName(String name) {
+           this.name = name;
+       }
+   }
+   ```
+
+2. 奶酪披萨
+
+   ```java
+   public class CheesePizza extends Pizza{
+       @Override
+       public void prepare() {
+           System.out.println("给奶酪披萨准备原材料");
+       }
+   }
+   ```
+
+3. 希腊披萨
+
+   ```java
+   public class GreekPizza extends Pizza{
+       @Override
+       public void prepare() {
+           System.out.println("给希腊披萨准备原材料");
+       }
+   }
+   ```
+
+4. `OrderPizza`
+
+   ```java
+   public class OrderPizza {
+       public OrderPizza() {
+           Pizza pizza = null;
+           String name = "";
+           Scanner scanner = new Scanner(System.in);
+           tag:while (true) {
+               name = scanner.next();
+               switch (name) {
+                   case "cheese":
+                       pizza = new CheesePizza();
+                       pizza.setName("奶酪披萨");
+                       break;
+                   case "greek":
+                       pizza = new GreekPizza();
+                       pizza.setName("希腊披萨");
+                       break;
+                   default:
+                       break tag;
+               }
+               pizza.prepare();
+               pizza.bake();
+               pizza.cut();
+               pizza.box();
+           }
+       }
+   }
+   ```
+
+### 3.1 简单工厂
+
+1. 简单工厂模式是属于创建型模式的一种。简单工厂模式是由一个工厂对象决定创建出哪一种产品类的实例。
+2. 定义一个创建对象的类，有关这个类封装实例化对象的行为
+
+```mermaid
+classDiagram
+class Pizza {
+	#name: String
+	+prepare() void
+	+bake() void
+	+cut() void
+	+box() void
+}
+class CheessPizza {
+	+prepare() void
+}
+class GreekPizza {
+	+prepare() void
+}
+class OrderPizza {
+	+OrderPizza() void
+}
+class SimpleFactory {
+	+createPizza(String type) Pizza
+}
+Pizza <|-- CheessPizza
+SimpleFactory ..> CheessPizza
+SimpleFactory ..> Pizza
+SimpleFactory ..> GreekPizza
+Pizza <|-- GreekPizza
+OrderPizza *-- SimpleFactory
+```
+
+定义简单工厂类，将制造披萨的方法封装其中
+
+```java
+public class SimpleFactory {
+    public Pizza createPizza(String type) {
+        Pizza pizza = null;
+        switch (type) {
+            case "cheese":
+                pizza = new CheesePizza();
+                pizza.setName("奶酪披萨");
+                break;
+            case "greek":
+                pizza = new GreekPizza();
+                pizza.setName("希腊披萨");
+                break;
+        }
+        return pizza;
+    }
+}
+```
+
+重新编写订单类
+
+```java
+public class OrderPizza {
+    // 定义一个简单工厂对象
+    private final SimpleFactory simpleFactory = new SimpleFactory();
+    public OrderPizza() {
+        String orderType = "";
+        Pizza pizza = null;
+        Scanner scanner = new Scanner(System.in);
+        do {
+            orderType = scanner.next();
+            pizza = simpleFactory.createPizza(orderType);
+            if (pizza != null) {
+                pizza.prepare();
+                pizza.bake();
+                pizza.cut();
+                pizza.box();
+            } else {
+                break;
+            }
+        } while (true);
+    }
+}
+```
+
+简单工厂也叫静态工厂，一般工厂类创建对象的方法为静态的
+
+### 3.2 工厂方法
+
+工厂方法模式：实例化方法放在其父类的抽象方法中，由子类决定要实例化的类，工厂方法模式将对象的实例化推迟到子类
+
+新的需求，甲方现在要求添加如下需求：客户能够点不同地区的风味披萨，比如：北京奶酪披萨、伦敦希腊披萨等。如果使用简单工厂模式，要根据不同的地区创建不同的工厂类，不利于代码的可扩展性
+
+工厂方法模式解决：将披萨项目的实例化的功能抽象成抽象方法，在不同的口味点餐子类中具体实现
+
+```mermaid
+classDiagram
+class Pizza {
+	#name: String
+	+prepare() void
+	+bake() void
+	+cut() void
+	+box() void
+}
+class BJCheessPizza {
+	+prepare() void
+}
+class BJGreekPizza {
+	+prepare() void
+}
+class LDCheessPizza {
+	+prepare() void
+}
+class LDGreekPizza {
+	+prepare() void
+}
+class OrderPizza {
+	+createPize() Pizza
+}
+class BJOrderPizza {
+	+createPize() Pizza
+}
+class LDOrderPizza {
+	+createPize() Pizza
+}
+Pizza <|-- BJCheessPizza
+BJCheessPizza <.. BJOrderPizza
+BJGreekPizza <.. BJOrderPizza
+Pizza <|-- BJGreekPizza
+OrderPizza <|-- BJOrderPizza
+OrderPizza <|-- LDOrderPizza
+Pizza <|-- LDCheessPizza
+LDCheessPizza <.. LDOrderPizza
+LDGreekPizza <.. LDOrderPizza
+Pizza <|-- LDGreekPizza
 ```
 
