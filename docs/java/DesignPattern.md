@@ -187,7 +187,7 @@ class PersonService {
 class PersonServiceImpl {
 	+delete(Integer id) void
 }
-PersonService <|-- PersonServiceImpl
+PersonService <|.. PersonServiceImpl
 ```
 
 #### 1.2.6 关联
@@ -968,6 +968,8 @@ enum Singleton {
 
 ## 3. 工厂模式
 
+工厂模式的意义：将实例化对象的代码提取出来，放到一个类中同一管理和维护，达到和主项目的依赖关系的解藕，从而提高项目的扩展和维护性
+
 一个披萨制作的例子：
 
 ```mermaid
@@ -1192,13 +1194,14 @@ class LDGreekPizza {
 	+prepare() void
 }
 class OrderPizza {
-	+createPize() Pizza
+	<<abstract>>
+	+createPize(String type) Pizza
 }
 class BJOrderPizza {
-	+createPize() Pizza
+	+createPize(String type) Pizza
 }
 class LDOrderPizza {
-	+createPize() Pizza
+	+createPize(String type) Pizza
 }
 Pizza <|-- BJCheessPizza
 BJCheessPizza <.. BJOrderPizza
@@ -1210,5 +1213,261 @@ Pizza <|-- LDCheessPizza
 LDCheessPizza <.. LDOrderPizza
 LDGreekPizza <.. LDOrderPizza
 Pizza <|-- LDGreekPizza
+```
+
+> **具体实现**
+
+修改披萨的种类
+
+```java
+public class BJCheesePizza extends Pizza{
+    @Override
+    public void prepare() {
+        setName("北京奶酪披萨");
+        System.out.println("北京奶酪披萨 准备原材料");
+    }
+}
+
+public class BJGreekPizza extends Pizza{
+    @Override
+    public void prepare() {
+        setName("北京希腊披萨");
+        System.out.println("北京希腊披萨 准备原材料");
+    }
+}
+```
+
+```java
+public class LDCheesePizza extends Pizza{
+    @Override
+    public void prepare() {
+        setName("伦敦奶酪披萨");
+        System.out.println("伦敦奶酪披萨 准备原材料");
+    }
+}
+
+public class LDGreekPizza extends Pizza{
+    @Override
+    public void prepare() {
+        setName("伦敦希腊披萨");
+        System.out.println("伦敦希腊披萨 准备原材料");
+    }
+}
+```
+
+修改`OrderPizza`为抽象类
+
+```java
+public abstract class OrderPizza {
+    public OrderPizza() {
+        String type = "";
+        Pizza pizza = null;
+        Scanner scanner = new Scanner(System.in);
+        do {
+            orderType = scanner.next();
+            pizza = createPizza(type);
+
+            if (pizza != null) {
+                pizza.prepare();
+                pizza.bake();
+                pizza.cut();
+                pizza.box();
+            } else {
+                break;
+            }
+        } while (true);
+    }
+
+    public abstract Pizza createPizza(String type);
+}
+```
+
+创建北京披萨订单类与伦敦披萨订单类
+
+```java
+public class BJOrderPizza extends OrderPizza{
+    @Override
+    public Pizza createPizza(String type) {
+        if (type.equals("cheese")) return new BJCheesePizza();
+        if (type.equals("greek")) return new BJGreekPizza();
+        return null;
+    }
+}
+
+public class LDOrderPizza extends OrderPizza{
+    @Override
+    public Pizza createPizza(String type) {
+        if (type.equals("cheese")) return new LDCheesePizza();
+        if (type.equals("greek")) return new LDGreekPizza();
+        return null;
+    }
+}
+```
+
+使用订单类时，可以根据需要创建不同的订单类
+
+### 3.3 抽象工厂
+
+1. 定义一个接口用于创建相关或有关依赖关系的对象簇，而无需指明具体的类
+2. 使用者根据具体的需要去创建具体的子类
+
+```mermaid
+classDiagram
+class Pizza {
+	#name: String
+	+prepare() void
+	+bake() void
+	+cut() void
+	+box() void
+}
+class BJCheessPizza {
+	+prepare() void
+}
+class BJGreekPizza {
+	+prepare() void
+}
+class LDCheessPizza {
+	+prepare() void
+}
+class LDGreekPizza {
+	+prepare() void
+}
+class AbsFactory {
+	<<interface>>
+	+createPize(String type) Pizza
+}
+class BJFactory {
+	+createPize(String type) Pizza
+}
+class LDFactory {
+	+createPize(String type) Pizza
+}
+Pizza <|-- BJCheessPizza
+Pizza <|-- BJGreekPizza
+Pizza <|-- LDCheessPizza
+Pizza <|-- LDGreekPizza
+BJCheessPizza <.. BJFactory
+BJGreekPizza <.. BJFactory
+LDCheessPizza <.. LDFactory
+LDGreekPizza <.. LDFactory
+BJFactory ..|> AbsFactory
+AbsFactory --o OrderPizza
+LDFactory ..|> AbsFactory
+```
+
+披萨类与[工厂方法](#3.2 工厂方法)的披萨类相同
+
+添加抽象层的接口`AbsFactory`
+
+```java
+public interface AbsFactory {
+    public Pizza createPizza(String type);
+}
+```
+
+添加`BJFactory`与`LDFactory`
+
+```java
+// BJFactory.java
+public class BJFactory implements AbsFactory{
+    @Override
+    public Pizza createPizza(String type) {
+        if (type.equals("cheese")) return new BJCheesePizza();
+        if (type.equals("greek")) return new BJGreekPizza();
+        return null;
+    }
+}
+
+// LDFactory.java
+public class LDFactory implements AbsFactory{
+    @Override
+    public Pizza createPizza(String type) {
+        if (type.equals("cheese")) return new LDCheesePizza();
+        if (type.equals("greek")) return new LDGreekPizza();
+        return null;
+    }
+}
+```
+
+订单类
+
+```java
+public class OrderPizza {
+    private final AbsFactory factory; // 聚合
+
+    public OrderPizza(AbsFactory factory) {
+        this.factory = factory;
+        handleOrder();
+    }
+
+    private void handleOrder() {
+        String type = "";
+        Pizza pizza = null;
+        Scanner scanner = new Scanner(System.in);
+        do {
+            type = scanner.next();
+            pizza = factory.createPizza(type);
+
+            if (pizza != null) {
+                pizza.prepare();
+                pizza.bake();
+                pizza.cut();
+                pizza.box();
+            } else {
+                break;
+            }
+        } while (true);
+    }
+}
+```
+
+## 4. 原型模式
+
+1. 原型模式是指用原型实例指定创建对象的种类，并且通过拷贝这些原型，创建新的对象
+2. 原型模式是一种创建型的设计模式，允许一个对象再创建另外一个可定制的对象，无需知道如何创建的细节
+3. 工作原理：通过将一个原型对象传给那个要发动创建的对象，这个要发动创建的对象请求原型对象拷贝他们自己来实现创建
+
+```mermaid
+classDiagram
+class Sheep {
+	-name: String
+    -color: String
+	-age: Interger
+	+Sheep(String name, String color, Integer color)
+}
+```
+
+克隆羊问题：创建十只属性相同的克隆羊
+
+```java
+public class Sheep implements Cloneable{
+    private String name;
+    private String color;
+    private Integer age;
+
+    public Sheep(String name,
+                 String color,
+                 Integer age) {
+        this.name = name;
+        this.color = color;
+        this.age = age;
+    }
+
+    @Override
+    protected Object clone() throws CloneNotSupportedException {
+        return super.clone();
+    }
+}
+```
+
+测试
+
+```java
+public class SheepTest {
+    public static void main(String[] args) throws CloneNotSupportedException {
+        Sheep sheep1 = new Sheep("Tom", "黄色", 3);
+        Sheep sheep2 = (Sheep) sheep1.clone();
+    }
+}
 ```
 
