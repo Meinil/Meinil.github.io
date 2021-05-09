@@ -1471,3 +1471,1130 @@ public class SheepTest {
 }
 ```
 
+浅拷贝和深拷贝：`java`的`clone`方法默认是浅拷贝，如果要进行深拷贝推荐使用序列化的方式
+
+## 5.建造者模式
+
+### 5.1 简介
+
+建造者模式：又叫生成器模式，是一种对象构建模式。它可以将复杂对象的建造过程抽象出来(抽象类别)，使这个抽象过程的不同实现方法可以构造出不同表现(属性)的对象。简单来说，建造者模式就是一步一步创建一个复杂的对象，它允许用户只通过指定复杂对象的类型和内容就可以构建他们，用户不需要知道内部的具体构建细节
+
+> **四个角色**
+
+1. `Product`产品角色：一个具体的产品对象
+
+2. `Builder`抽象建造者：创建一个`Product`对象的各个部件指定的接口/抽象类
+
+3. `ConcreteBuilder`具体建造者：实现接口，构建和装配各个部件
+
+4. `Director`指挥者：构建一个使用`Builder`接口/抽象类的对象。它有两个作用
+
+   隔离了客户与对象的生产过程
+
+   负责控制产品对象的生产过程
+
+**项目需求**：建造一座房子，建造房子有打地基、砌墙、封顶操作，房子则有普通房子、高楼等
+
+### 5.2 传统实现
+
+```mermaid
+classDiagram
+class AbstractHouse {
+	<<abstract>>
+	#buildBasic() void
+	#buildWalls() void
+	#roofed() void
+	+bulid() void
+}
+class CommonHouse {
+	#buildBasic() void
+	#buildWalls() void
+	#roofed() void
+}
+class HighBuilding {
+	#buildBasic() void
+	#buildWalls() void
+	#roofed() void
+}
+AbstractHouse <|-- CommonHouse
+AbstractHouse <|-- HighBuilding
+```
+
+```java
+// AbstractHouse.java
+public abstract class AbstractHouse {
+    protected abstract void buildBasic();
+    protected abstract void buildWalls();
+    protected abstract void roofed();
+    public void build() {
+        buildBasic();
+        buildWalls();
+        roofed();
+    }
+}
+
+// CommonHouse.java
+public class CommonHouse extends AbstractHouse{
+    @Override
+    protected void buildBasic() {
+        System.out.println("普通房子打地基");
+    }
+
+    @Override
+    protected void buildWalls() {
+        System.out.println("普通房子砌墙");
+    }
+
+    @Override
+    protected void roofed() {
+        System.out.println("普通房子封顶");
+    }
+}
+```
+
+### 5.3 建造者实现
+
+```mermaid
+classDiagram
+class HouseBuilder {
+	<<abstract>>
+	-house: House
+	+buildBaisc() void
+	+buildWalls() void
+	+roofed() void
+	+bulid() House
+}
+class House {
+	<<产品>>
+	-basic: String
+    -wall: String
+    -roofed: String
+}
+class CommonHouse {
+	+buildBaisc() void
+	+buildWalls() void
+	+roofed() void
+}
+class HighBuilding {
+	+buildBaisc() void
+	+buildWalls() void
+	+roofed() void
+}
+class HouseDirector {
+	<<指挥者>>
+	-houseBuilder: HouseBuilder
+	+setHouseBuilder(HouseBuilder houseBuilder) void
+}
+HouseDirector o-- HouseBuilder
+House --* HouseBuilder
+HouseBuilder <|-- CommonHouse
+HouseBuilder <|-- HighBuilding
+
+```
+
+1. 产品`House`
+
+   ```java
+   public class House {
+       private String basic;
+       private String wall;
+       private String roofed;
+   }
+   ```
+
+2. 抽象建造者
+
+   ```java
+   public abstract class HouseBuilder {
+       protected House house = new House();
+   
+       // 建造房子
+       public abstract void buildBasic();
+       public abstract void buildWall();
+       public abstract void roofed();
+   
+       // 将房子返回
+       public House build() {
+           return house;
+       }
+   }
+   ```
+
+3. 具体产品
+
+   ```java
+   public class CommonHouse extends HouseBuilder{
+       @Override
+       public void buildBasic() {
+           System.out.println("普通房子打地基");
+       }
+   
+       @Override
+       public void buildWall() {
+           System.out.println("普通房子砌墙");
+       }
+   
+       @Override
+       public void roofed() {
+           System.out.println("普通房子封顶");
+       }
+   }
+   ```
+
+4. 指挥者
+
+   ```java
+   public class HouseDirector {
+       private HouseBuilder houseBuilder = null;
+   
+       public HouseDirector(HouseBuilder houseBuilder) {
+           this.houseBuilder = houseBuilder;
+       }
+   
+       public void setHouseBuilder(HouseBuilder houseBuilder) {
+           this.houseBuilder = houseBuilder;
+       }
+   
+       // 建造房子
+       public House constructHouse() {
+           houseBuilder.buildBasic();
+           houseBuilder.buildWall();
+           houseBuilder.roofed();
+           return houseBuilder.build();
+       }
+   }
+   ```
+
+5. 测试
+
+   ```java
+   @DisplayName("测试建造者模式")
+   @Test
+   public void testHouse() {
+       // 房子
+       CommonHouse commonHouse = new CommonHouse();
+   
+       // 指挥者
+       HouseDirector houseDirector = new HouseDirector(commonHouse);
+   
+       // 建造房子
+       House house = houseDirector.constructHouse();
+   }
+   ```
+
+## 6. 适配器模式
+
+> **简介**
+
+1. 适配器`Adapter Pattern`将某个类的接口转换成客户端期望的另一个接口表示，主要迷弟是兼容性，让原本因接口不匹配不能在一起工作的两个类可以协同工作。别名为包装器`wrapper`
+2. 适配器模式属于结构型模式
+3. 主要分为三类：类适配器模式、对象适配器模式、接口适配器模式
+
+> **工作原理**
+
+1. 适配器模式：将一个类的接口转换成另一个接口。让原本接口不兼容的类可以兼容
+2. 从用户的角度看不到被适配着，是解藕的
+3. 用户调用适配器转化出来的目标接口方法，适配器再调用被适配者的相关接口方法
+
+```mermaid
+graph LR
+source[被适配者src,需要被适配的类,接口,对象]--> adapter(适配器,Adapter) -->目标dist
+```
+
+### 6.1 类适配器
+
+基本介绍：`Adapter`类，通过继承`src`类，实现`dist`类接口，完成`src`->`dist`的适配
+
+案例分析：手机充电器，可以将`220V`的交流点变为`5V`的直流电，供手机使用
+
+```mermaid
+classDiagram
+class Voltage220V {
+	<<src>>
+	+output220V() int
+}
+class Voltage5V {
+	<<interface>>
+	+output5V() void
+}
+class VoltageAdapter {
+	<<适配器类>>
+	+output5V() int
+}
+class Phone {
+	+charging() void
+}
+Voltage220V <|-- VoltageAdapter
+Voltage5V <.. Phone
+Voltage5V <|.. VoltageAdapter
+```
+
+> **具体实现**
+
+1. 被适配的类
+
+   ```java
+   public class Voltage220V {
+       public int output220V() {
+           System.out.println("电压为: 220V");
+           return 220;
+       }
+   }
+   ```
+
+2. 适配接口
+
+   ```java
+   public interface Voltage5V {
+       public int output5V();
+   }
+   ```
+
+3. 适配器
+
+   ```java
+   public class VoltageAdapter extends Voltage220V implements Voltage5V{
+       @Override
+       public int output5V() {
+           int src = output220V(); // 获取原本的结果
+           int dist = src / 44;    // 处理转换
+           return dist;
+       }
+   }
+   ```
+
+4. 手机类
+
+   ```java
+   public class Phone {
+       public void charging(Voltage5V v) {
+           if (v.output5V() == 5) {
+               System.out.println("可以充电了");
+               return;
+           }
+           System.out.println("电压大于5V不能充电");
+       }
+   }
+   ```
+
+5. 测试
+
+   ```java
+   @Test
+   public void testPhone() {
+       Phone phone = new Phone();
+       phone.charging(new VoltageAdapter());
+   }
+   ```
+
+> **注意事项**
+
+1. `java`是单继承机制，所以类适配器需要`src`类是一个缺点，因为要求`dist`必须是接口
+2. `src`类的方法在`Adapter`中都会暴露出来，也增加了使用的成本
+
+### 6.2 对象适配器
+
+1. 和类适配器模式相同，只是将`Adapter`类作修改，不是继承`src`类，而是持有`src`类的实例，已解决兼容性的问题。即：持有`src`类，实现`dist`接口
+2. 根据**合成复用原则**，在系统中尽量使用关联关系来代替继承关系
+
+```mermaid
+classDiagram
+class Voltage220V {
+	<<src>>
+	+output220V() int
+}
+class Voltage5V {
+	<<interface>>
+	+output5V() void
+}
+class VoltageAdapter {
+	<<适配器类>>
+	-voltage220V: Voltage220V
+	+output5V() int
+	+VoltageAdapter(Voltage220V voltage220V) void
+}
+class Phone {
+	+charging() void
+}
+Voltage220V --o VoltageAdapter
+Voltage5V <.. Phone
+VoltageAdapter ..|> Voltage5V
+```
+
+> **具体实现**
+
+修改`VoltageAdapter`
+
+```java
+// 适配器
+public class VoltageAdapter implements Voltage5V{
+    private final Voltage220V voltage220V;
+
+    public VoltageAdapter(Voltage220V voltage220V) {
+        this.voltage220V = voltage220V;
+    }
+
+    @Override
+    public int output5V() {
+        int dist = 0;
+        if (voltage220V != null) {
+            int src = voltage220V.output220V(); // 获取原本的结果
+            dist = src / 44;    // 处理转换
+            return dist;
+        }
+        return dist;
+    }
+}
+
+// Phone
+public class Phone {
+    public void charging(Voltage5V v) {
+        if (v.output5V() == 5) {
+            System.out.println("可以充电了");
+            return;
+        }
+        if (v.output5V() > 5 ) {
+            System.out.println("电压大于5V不能充电");
+        }
+    }
+}
+```
+
+测试
+
+```java
+@DisplayName("测试对象适配器模式")
+@Test
+public void testPhone() {
+    Phone phone = new Phone();
+
+    phone.charging(new VoltageAdapter(new Voltage220V()));
+}
+```
+
+### 6.3 接口适配器
+
+当不需要全部实现接口提供的方法时，可先设计一个抽象类实现接口，并未该接口中每个方法提供一个默认实现(空方法)，那么该抽象类的子类可有选择地覆盖父类的某些方法来实现需求
+
+```mermaid
+classDiagram
+class Interface {
+	<<Interface>>
+	+operation1() void
+    +operation2) void
+    +operation3) void
+    +operation4) void
+}
+class AbsAdapter {
+	+operation1() void
+    +operation2) void
+    +operation3) void
+    +operation4) void
+}
+Interface <|.. AbsAdapter
+```
+
+> **具体实现**
+
+```java
+// Interface
+public interface Interface {
+    void operation1();
+    void operation2();
+    void operation3();
+    void operation4();
+}
+
+// AbsAdapter
+public class AbsAdapter implements Interface{
+    @Override
+    public void operation1() {}
+
+    @Override
+    public void operation2() {}
+
+    @Override
+    public void operation3() {}
+
+    @Override
+    public void operation4() {}
+}
+```
+
+测试使用 
+
+```java
+public class Client {
+    @Test
+    @DisplayName("接口适配器")
+    public void testAbs() {
+        AbsAdapter adapter = new AbsAdapter() {
+            @Override
+            public void operation1() {
+                // 只需要重写要使用的方法即可
+                System.out.println("使用了m1的方法");
+            }
+        };
+        adapter.operation1();
+    }
+}
+```
+
+## 7. 桥接模式
+
+> **基本介绍**
+
+1. 桥接模式`Bridge`是指：将现实与抽象放在两个不同的类的层次中，使两个层次可以独立改变，它是一种结构型设计模式
+2. `Bridge`模式基于类的最小设计原则，通过使用封装、聚合及继承等行为让不同的类承担不同的职责。它的主要特点是把抽象`Abstraction`与行为实现分离开来，从而可以保持各部分的独立性以及应对他们的功能扩展
+
+> **案例分析**
+
+现在对不同的手机类型(直立式、折叠式、滑盖式)实现编程：开机、关机、上网、打电话等
+
+```mermaid
+classDiagram
+class Brand {
+	<<Interface>>
+    +open() void
+    +close() void
+    +call() void
+}
+class Vivo {
+	+open() void
+    +close() void
+    +call() void
+}
+class XiaoMi {
+	+open() void
+    +close() void
+    +call() void
+}
+class Phone {
+	<<abstarct>>
+	-brand: Brand
+    #open() void
+    #close() void
+    #call() void
+}
+class FoldedPhone {
+	+open() void
+    +close() void
+    +call() void
+}
+class UpRightPhone {
+	+open() void
+    +close() void
+    +call() void
+}
+Brand --o Phone
+Brand <|-- Vivo
+Brand <|-- XiaoMi
+Phone <|.. FoldedPhone
+Phone <|.. UpRightPhone
+```
+
+> **具体实现**
+
+1. `Brand`接口
+
+   ```java
+   public interface Brand {
+       void open();
+       void close();
+       void call();
+   }
+   ```
+
+2. `Brand`的实现类
+
+   ```java
+   // Vivo
+   public class Vivo implements Brand{
+       @Override
+       public void open() {
+           System.out.println("Vivo手机开机了");
+       }
+   
+       @Override
+       public void close() {
+           System.out.println("Vivo手机关机了");
+       }
+   
+       @Override
+       public void call() {
+           System.out.println("Vivo手机打电话");
+       }
+   }
+   
+   // XiaoMi
+   public class XiaoMi implements Brand{
+       @Override
+       public void open() {
+           System.out.println("小米手机开机了");
+       }
+   
+       @Override
+       public void close() {
+           System.out.println("小米手机关机了");
+       }
+   
+       @Override
+       public void call() {
+           System.out.println("小米手机打电话");
+       }
+   }
+   ```
+
+3. 桥接器`Phone`
+
+   ```java
+   public abstract class Phone {
+       private final Brand brand;
+   
+       public Phone(Brand brand) {
+           this.brand = brand;
+       }
+   
+       protected void open() {
+           brand.open();
+       }
+   
+       protected void close() {
+           brand.close();
+       }
+   
+       protected void call() {
+           brand.call();
+       }
+   }
+   ```
+
+4. 桥接器的实现类
+
+   ```java
+   // FoldedPhone
+   public class FoldedPhone extends Phone{
+       public FoldedPhone(Brand brand) {
+           super(brand);
+       }
+   
+       public void open() {
+           super.open();
+           System.out.println("折叠手机");
+       }
+   
+       public void close() {
+           super.close();
+           System.out.println("折叠手机");
+       }
+   
+       public void call() {
+           super.call();
+           System.out.println("折叠手机");
+       }
+   }
+   
+   // UpRightPhone
+   public class UpRightPhone extends Phone{
+       public UpRightPhone(Brand brand) {
+           super(brand);
+       }
+   
+       public void open() {
+           super.open();
+           System.out.println("直立手机");
+       }
+   
+       public void close() {
+           super.close();
+           System.out.println("直立手机");
+       }
+   
+       public void call() {
+           super.call();
+           System.out.println("直立手机");
+       }
+   }
+   ```
+
+5. 测试
+
+   ```java
+   public class Client {
+       @Test
+       @DisplayName("测试桥接模式")
+       public void test () {
+           Phone phone = new FoldedPhone(new XiaoMi());
+           phone.open();
+           phone.call();
+           phone.close();
+       }
+   }
+   ```
+
+> **注意事项**
+
+1. 实现了抽象和实现部分的分离，从而极大的提供了系统的灵活性，让抽象部分和实现独立开来，这有助于系统进行分层设计，从而阐述更好的结构化系统
+2. 对于系统的高层部分，只需要知道抽象部分和实现部分的接口就可以了，其他的部分有具体业务来完成
+3. 桥接模式替代多层继承方案，可以减少子类的个数，降低系统的管理和维护成本
+4. 桥接模式的引入增加了系统的理解和设计难度，由于聚合关联关系建立在抽象层，要求开发者针对抽象进行设计和编程
+5. 桥接模式要求正确识别出系统中两个独立变化的维度，因此其使用范围有一定的局限性，即需要有这样的应用场景
+
+## 8. 装饰者模式
+
+装饰者模式：动态的将新功能附加到对象上。在对象功能扩展方面，它比继承更加有弹性，装饰者模式体现了开闭原则
+
+> **案例分析**
+
+星巴克咖啡订单
+
+1. 咖啡种类/单品咖啡：`Espresso`意大利浓咖啡、`ShortBlack`、`LongBlack`美式咖啡、`Decaf`无因咖啡
+2. 调料：`Milk`、`Soy`豆浆、`Chocolate`
+3. 用户可以点单品咖啡、也可以是单品咖啡+调料组合
+
+```mermaid
+classDiagram
+class Drink {
+	<<abstract>>
+	-description: String
+	-price: Double
+    +getDescription() String
+    +getPrice() double
+    +setDescription(String description) String
+    +setPrice(double price) String
+    +cost() void
+}
+class ShortBlack {
+	+cost()
+}
+class Decaf {
+	+cost()
+}
+class Espresso {
+	+cost()
+}
+class LongBlack {
+	+cost()
+}
+class Coffee {
+	+cost()
+}
+class Decorator {
+	-drink: Drink
+	+Decorator(Drink drink) void
+    +getDescription() String
+	+cost()
+}
+class Chocolate {
+	+Chocolate(Drink drink) void
+    +getDescription() String
+	+cost()
+}
+class Milk {
+	+Milk(Drink drink) void
+    +getDescription() String
+	+cost()
+}
+class Soy {
+	+Soy(Drink drink) void
+    +getDescription() String
+	+cost()
+}
+Coffee --|> Drink
+
+ShortBlack --|> Coffee
+Decaf --|> Coffee
+Espresso --|> Coffee
+LongBlack --|> Coffee
+
+Drink --* Decorator
+
+Decorator <|-- Chocolate
+Decorator <|-- Milk
+Decorator <|-- Soy
+```
+
+**说明**
+
+1. `Drink`类就是`Component`抽象类
+2. `ShortBlack`、`Decaf`、`Espresso`、`LongBlack`就是单品咖啡
+3. `Decorator`是一个装饰类，含一个被装饰的对象`Drink`
+4. `Decorator`的`cost`方法用于计算费用
+
+> **具体实现**
+
+1. 顶层抽象类
+
+   ```java
+   public abstract class Drink {
+       private String description;
+       private double price;
+   
+       // 子类实现
+       public abstract double cost();
+   
+       public void setDescription(String description) {
+           this.description = description;
+       }
+   
+       public void setPrice(double price) {
+           this.price = price;
+       }
+   
+       public String getDescription() {
+           return description;
+       }
+   
+       public double getPrice() {
+           return price;
+       }
+   }
+   ```
+
+2. `Coffee`用于提取单品咖啡的共有特点
+
+   ```java
+   public class Coffee extends Drink{
+       @Override
+       public double cost() {
+           return super.getPrice();
+       }
+   }
+   ```
+
+3. 单品咖啡类
+
+   ```java
+   // Espresso
+   public class Espresso extends Coffee{
+       public Espresso() {
+           setDescription("意大利咖啡 ");
+           setPrice(6.0);
+       }
+   }
+   
+   // LongBlack
+   public class LongBlack extends Coffee{
+       public LongBlack() {
+           setDescription("LongBack咖啡 ");
+           setPrice(7.0);
+       }
+   }
+   
+   // ShortBlack
+   public class ShortBlack extends Coffee{
+       public ShortBlack() {
+           setDescription("ShortBlack咖啡 ");
+           setPrice(8.0);
+       }
+   }
+   ```
+
+4. 装饰器
+
+   ```java
+   public class Decorator extends Drink{
+       private final Drink drink;
+   
+       public Decorator(Drink drink) {
+           this.drink = drink;
+       }
+   
+       @Override
+       public double cost() {
+           // 自己的价格加上调料的价格
+           return super.getPrice() + drink.cost();
+       }
+   
+       @Override
+       public String getDescription() {
+           return super.getDescription() + " "
+                   + super.getPrice() + " " 
+                   + drink.getDescription();
+       }
+   }
+   ```
+
+5. 配料类
+
+   ```java
+   // Chocolate
+   public class Chocolate extends Decorator{
+       public Chocolate(Drink drink) {
+           super(drink);
+           setDescription("巧克力 ");
+           setPrice(3.0);
+       }
+   }
+   
+   // Milk
+   public class Milk extends Decorator{
+       public Milk(Drink drink) {
+           super(drink);
+           setDescription("牛奶 ");
+           setPrice(4.0);
+       }
+   }
+   
+   // Soy
+   public class Soy extends Decorator{
+       public Soy(Drink drink) {
+           super(drink);
+           setDescription("豆浆 ");
+           setPrice(5.0);
+       }
+   }
+   ```
+
+6. 测试
+
+   ```java
+   public class Client {
+       @Test
+       @DisplayName("测试装饰者模式")
+       public void test() {
+           // 2份巧克力，一份牛奶的LongBlack
+           Drink coffee = new LongBlack(); // 7
+   
+           coffee = new Milk(coffee); // 4
+   
+           coffee = new Chocolate(coffee); // 3
+           coffee = new Chocolate(coffee); // 3
+   
+           System.out.println(coffee.cost()); // 17.0
+           System.out.println(coffee.getDescription()); 
+           // 巧克力  3.0 巧克力  3.0 牛奶  4.0 LongBack咖啡 
+       }
+   }
+   ```
+
+## 9.组合模式
+
+> **基本介绍**
+
+1. 组合模式`Composite Pattern`，又叫部分整体模式，它创建了对象组的树形结构，将对象组合成树状结构以表示"整体-部分"的层次关系
+2. 组合模式依据树形结构来组合对象，用来表示部分以及整体层次，属于结构型模式
+3. 组合模式使得用户对单个和组合对象的访问具有一致性，即：组合能让客户以一致的方式处理个别对象以及组合对象
+
+```mermaid
+classDiagram
+class Component {
+	<<Interface>>
+	+operation() void
+	+add(Component component) void
+	+remove(Component component) void
+	+getChild(int id) void
+}
+class Leaf {
+	+operation() void
+}
+class Composite {
+	+operation() void
+	+add(Component component) void
+	+remove(Component component) void
+	+getChild(int id) void
+}
+Component <|-- Leaf
+Component <|-- Composite
+Composite o-- Component
+```
+
+**上图介绍**
+
+1. `Component`：这是组合中对象声明接口，在适当情况下，实现所有类共有的接口默认行为，用于访问和管理`Component`子部件，`Component`可以是抽象类或者接口
+2. `Leaf`：在组合中表示叶子节点，叶子节点没有子节点
+3. `Composite`：非叶子节点，用于存储子部件，在`Component`接口中实现子部件的相关操作，增删改查
+
+组合模式主要用于解决：要处理的对象可以生成一棵树形结构，而我们要对树上的节点和叶子节点进行操作时，它能够提供一致的方式，而不考虑它是节点还是叶子
+
+> **需求分析**
+
+编写程序展示一个学校院系结构：在一个页面中展示出学校的院系组成，一个学校有多个院校，一个学院有多个系
+
+```mermaid
+classDiagram
+class OrganizationComponent {
+	<<abstract>>
+	#add(OrganizationComponent organizationComponent) void
+	#remove(OrganizationComponent organizationComponent) void
+    #print() void
+}
+class Department {
+	
+}
+class College {
+	
+}
+class University {
+	
+}
+
+OrganizationComponent <|-- Department
+OrganizationComponent <|--o College
+OrganizationComponent <|--o University
+```
+
+1. `OrganizationComponent`
+
+   ```java
+   public abstract class OrganizationComponent {
+       private String name; // 名字
+       private String des; // 说明
+   
+       public OrganizationComponent(String name, String des) {
+           this.name = name;
+           this.des = des;
+       }
+   
+       protected void add(OrganizationComponent organizationComponent) {
+           throw new UnsupportedOperationException();
+       }
+   
+       protected void remove(OrganizationComponent organizationComponent) {
+           throw new UnsupportedOperationException();
+       }
+   
+       protected abstract void print();
+   
+       public String getName() {
+           return name;
+       }
+   
+       public String getDes() {
+           return des;
+       }
+   
+       public void setName(String name) {
+           this.name = name;
+       }
+   
+       public void setDes(String des) {
+           this.des = des;
+       }
+   }
+   ```
+
+2. `Department`
+
+   ```java
+   public class Department extends OrganizationComponent{
+   
+       public Department(String name, String des) {
+           super(name, des);
+       }
+   
+       @Override
+       public String getName() {
+           return super.getName();
+       }
+   
+       @Override
+       public String getDes() {
+           return super.getDes();
+       }
+   
+       @Override
+       protected void print() {
+           System.out.println(getName());
+       }
+   }
+   ```
+
+3. `College`
+
+   ```java
+   public class Department extends OrganizationComponent{
+   
+       public Department(String name, String des) {
+           super(name, des);
+       }
+   
+       @Override
+       public String getName() {
+           return super.getName();
+       }
+   
+       @Override
+       public String getDes() {
+           return super.getDes();
+       }
+   
+       @Override
+       protected void print() {
+           System.out.println(getName());
+       }
+   }
+   ```
+
+4. `University`
+
+   ```java
+   public class University extends OrganizationComponent{
+   
+       private final List<OrganizationComponent> organizationComponents = new ArrayList<>();
+   
+       public University(String name, String des) {
+           super(name, des);
+       }
+   
+       @Override
+       protected void add(OrganizationComponent organizationComponent) {
+           organizationComponents.add(organizationComponent);
+       }
+   
+       @Override
+       protected void remove(OrganizationComponent organizationComponent) {
+           organizationComponents.remove(organizationComponent);
+       }
+   
+       @Override
+       public String getName() {
+           return super.getName();
+       }
+   
+       @Override
+       public String getDes() {
+           return super.getDes();
+       }
+   
+       @Override
+       protected void print() {
+           System.out.println("-------------" + getName() + "-------------");
+           for (OrganizationComponent organizationComponent : organizationComponents) {
+               organizationComponent.print();
+           }
+       }
+   }
+   ```
+
+5. 测试
+
+   ```java
+   public class Client {
+       @Test
+       @DisplayName("测试组合模式")
+       public void test() {
+           // 创建学校
+           OrganizationComponent university = new University("清华大学", "中国顶尖院校");
+   
+           // 创建学院
+           OrganizationComponent college1 = new College("计算机学院", "计算机学院");
+           OrganizationComponent college2 = new College("信息工程学院", "信息工程学院");
+   
+           // 创建专业
+           college1.add(new Department("软件工程", "软件工程不错"));
+           college1.add(new Department("网络工程", "网络工程不错"));
+           college1.add(new Department("计算机科学与技术", "计算机科学与技术不错"));
+           college2.add(new Department("网络安全", "网络安全"));
+           college2.add(new Department("通信工程", "通信工程不过好学"));
+   
+           // 将学院加入到学校中
+           university.add(college1);
+           university.add(college2);
+   
+           university.print();
+       }
+   }
+   ```
+
+   

@@ -3,7 +3,7 @@ title: Promise
 date: '2021-05-03'
 sidebar: 'auto'
 categories:
- - Promise
+ - javascript
 tags:
  - javascript
  - 前端
