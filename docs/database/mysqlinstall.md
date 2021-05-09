@@ -11,7 +11,7 @@ tags:
 
 ### 1. 下载
 
-[下载连接]([MySQL :: Download MySQL Community Server](https://dev.mysql.com/downloads/mysql/))
+[下载连接](https://dev.mysql.com/downloads/mysql/)
 
 <img src="https://gitee.com/dingwanli/picture/raw/master/20210509192724.png" style="zoom:50%;" />
 
