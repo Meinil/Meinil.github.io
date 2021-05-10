@@ -423,29 +423,31 @@ class A{
     + operation2();
     + operation3();
 }
-Interface <|.. A
-Interface1 <|.. A
 class B{
 	+ operation1();
     + operation4();
     + operation5();
 }
-Interface <|.. B
-Interface2 <|.. B
 class C{
 	+ depend1(Interface);
     + depend2(Interface1);
     + depend3(Interface1);
 }
-Interface <.. C
-Interface1 <.. C
 class D{
 	+ depend1(Interface);
     + depend4(Interface2);
     + depend5(Interface2);
 }
-Interface <.. D
-Interface2 <.. D
+Interface <|.. A
+Interface <|.. B
+Interface <|.. C
+Interface <|.. D
+
+A ..|> Interface1
+C ..|> Interface1
+
+B ..|> Interface2
+D ..|> Interface2
 ```
 
 具体实现
@@ -2597,4 +2599,741 @@ OrganizationComponent <|--o University
    }
    ```
 
+
+## 10. 外观模式
+
+### 10.1 基本介绍
+
+1. 外观模式`Facade`，也叫过程模式：外观模式为子系统中的一组接口提供一个一致的界面，此模式定义了一个高层接口，这个接口使得这一子系统更加容易使用
+2. 外观模式通过定义一个一致的接口，用以屏蔽内部子系统的细节，使得调用端只需要跟这个接口发生调用，而无需关心这个子系统的内部细节
+
+```mermaid
+classDiagram
+class Client { }
+class 外观类 { }
+class 子系统1 { }
+class 子系统2 { }
+class 子系统3 { }
+外观类 o-- 子系统1
+外观类 o-- 子系统2
+外观类 o-- 子系统3
+Client ..> 外观类
+```
+
+> **上图分析**
+
+1. 外观类`Facade`：为调用端提供统一的调用接口，外观类知道哪些子系统负责处理请求，从而将调用端的请求代理给适当子系统对象
+2. 调用者`Client`：外观接口的调用者
+3. 子系统的集合：模块或者子系统，处理`Facade`对象指派的任务，他是功能的实际提供者
+
+### 10.2 案例分析
+
+使用影院的具体步骤
+
+1. 开爆米花机 
+2. 放下荧幕 
+3. 开投影仪 
+4. 开音响 
+5. 开DVD,选dvd
+6. 去拿爆米花
+7. 关灯
+8. 观影结束,关闭各种设备
+
+```mermaid
+classDiagram
+class HomeTheaterFacade {
+	<<外观类>>
+    -dvdPlayer: DVDPlayer
+    -popcorn: Popcorn
+    -projector: Projector
+    -screen: Screen
+    -stereo: Stereo
+    -theaterLight: TheaterLight
+	+ready() void
+	+play() void
+	+pause() void
+	+end() void
+}
+class Stereo {
+	<<立体声音响>>
+	-instance: Stereo
+    -Stereo()
+	+on() void
+	+off() void
+	+up() void
+	+down() void
+}
+class TheaterLight {
+	<<灯光>>
+	-instance: TheaterLight
+    -TheaterLight()
+	+getInstance() TheaterLight
+	+on() void
+	+off() void
+	+up() void
+	+down() void
+}
+class Screen {
+	<<屏幕>>
+	-instance: TheaterLight
+	-Screen()
+	+getInstance() TheaterLight
+	+on() void
+	+off() void
+}
+class Projector {
+	<<投影仪>>
+	-instance: Projector
+	-Projector()
+    +getInstance() Projector
+	+on() void
+	+off() void
+	+focus() void
+}
+class Popcorn {
+	<<爆米花>>
+	-instance: Popcorn
+	-Popcorn()
+    +getInstance() Popcorn
+	+on() void
+	+off() void
+	+pop() void
+}
+class DVDPlayer {
+	<<DVD>>
+	-instance: DVDPlayer
+	-DVDPlayer()
+    +getInstance() DVDPlayer
+	+on() void
+	+off() void
+	+play() void
+    +pause() void
+}
+Stereo --o HomeTheaterFacade
+TheaterLight --o HomeTheaterFacade
+Screen --o HomeTheaterFacade
+HomeTheaterFacade o-- Projector
+HomeTheaterFacade o-- Popcorn
+HomeTheaterFacade o-- DVDPlayer
+```
+
+### 10.3 具体实现
+
+1. 相关设备类
+
+   `DVDPlayer`
+
+   ```java
+   public class DVDPlayer {
+       private static final DVDPlayer instance = new DVDPlayer();
+       private DVDPlayer() {}
    
+       public static DVDPlayer getInstance() {
+           return instance;
+       }
+   
+       public void on() {
+           System.out.println("DVD打开");
+       }
+   
+       public void off() {
+           System.out.println("DVD关闭");
+       }
+   
+       public void play() {
+           System.out.println("DVD播放");
+       }
+   
+       public void pause() {
+           System.out.println("DVD暂停");
+       }
+   }
+   ```
+
+   爆米花
+
+   ```java
+   public class Popcorn {
+       private static final Popcorn instance = new Popcorn();
+       private Popcorn() {}
+   
+       public static Popcorn getInstance() {
+           return instance;
+       }
+   
+       public void on() {
+           System.out.println("爆米花打开");
+       }
+       public void off() {
+           System.out.println("爆米花关闭");
+       }
+       public void pop() {
+           System.out.println("出爆米花");
+       }
+   }
+   ```
+
+   投影仪
+
+   ```java
+   public class Projector {
+       private static final Projector instance = new Projector();
+       private Projector() {}
+   
+       public static Projector getInstance() {
+           return instance;
+       }
+   
+       public void on() {
+           System.out.println("投影仪打开");
+       }
+       public void off() {
+           System.out.println("投影仪关闭");
+       }
+       public void focus() {
+           System.out.println("正在聚焦");
+       }
+   }
+   ```
+
+   屏幕
+
+   ```java
+   public class Screen {
+       private static final Screen instance = new Screen();
+       private Screen() {}
+   
+       public static Screen getInstance() {
+           return instance;
+       }
+   
+       public void on() {
+           System.out.println("屏幕打开");
+       }
+       public void off() {
+           System.out.println("屏幕关闭");
+       }
+   }
+   ```
+
+   立体声音响
+
+   ```java
+   public class Stereo {
+       private static final Stereo instance = new Stereo();
+       private Stereo() {}
+   
+       public static Stereo getInstance() {
+           return instance;
+       }
+   
+       public void on() {
+           System.out.println("立体声音响开启");
+       }
+       public void off() {
+           System.out.println("立体声音响关闭");
+       }
+   
+       public void up() {
+           System.out.println("音量调大");
+       }
+       public void down() {
+           System.out.println("音量调小");
+       }
+   }
+   ```
+
+   灯光
+
+   ```java
+   public class TheaterLight {
+       private static final TheaterLight instance = new TheaterLight();
+       private TheaterLight() {}
+   
+       public static TheaterLight getInstance() {
+           return instance;
+       }
+   
+       public void on() {
+           System.out.println("灯光开启");
+       }
+       public void off() {
+           System.out.println("灯光关闭");
+       }
+   
+       public void up() {
+           System.out.println("灯光调大");
+       }
+       public void down() {
+           System.out.println("灯光调小");
+       }
+   }
+   ```
+
+2. 外观类
+
+   ```java
+   public class HomeTheaterFacade {
+       private final DVDPlayer dvdPlayer = DVDPlayer.getInstance();
+       private final Popcorn popcorn = Popcorn.getInstance();
+       private final Projector projector = Projector.getInstance();
+       private final Screen screen = Screen.getInstance();
+       private final Stereo stereo = Stereo.getInstance();
+       private final TheaterLight theaterLight = TheaterLight.getInstance();
+   
+       // 准备
+       public void ready() {
+           popcorn.on();
+           popcorn.pop();
+           screen.on();
+           projector.on();
+           stereo.on();
+           dvdPlayer.on();
+           theaterLight.down();
+       }
+   
+       // 播放
+       public void play() {
+           dvdPlayer.play();
+       }
+   
+       // 暂停
+       public void pause() {
+           dvdPlayer.pause();
+       }
+   
+       // 结束
+       public void end() {
+           popcorn.off();
+           screen.off();
+           projector.off();
+           stereo.off();
+           dvdPlayer.off();
+           theaterLight.up();
+       }
+   }
+   ```
+
+3. 测试
+
+   ```java
+   public class Client {
+       @Test
+       @DisplayName("外观模式")
+       public void test() {
+           HomeTheaterFacade homeTheaterFacade = new HomeTheaterFacade();
+           System.out.println("=====================");
+           homeTheaterFacade.ready();
+           System.out.println("=====================");
+           homeTheaterFacade.play();
+           System.out.println("=====================");
+           homeTheaterFacade.pause();
+           System.out.println("=====================");
+           homeTheaterFacade.end();
+       }
+   }
+   ```
+
+### 10.4 注意事项
+
+1. 外观模式对外屏蔽了子系统的细节，因此外观模式降低了客户端对子系统使用的复杂性
+2. 外观模式对客户端与子系统的耦合关系，让子系统内部的模块更易维护和扩展
+3. 通过合理的使用外观模式，可以帮我们更好的划分访问的层次
+4. 当系统需要进行分层时，可以考虑使用`Facade`模式
+5. 在维护一个遗留的大型系统时，可能这个系统已经变得非常难以维护和扩展，此时可以考虑为新系统开发一个`Facade`类交互，提高复用性
+6. 不能过多或者不合理的使用外观模式。使用外观模式，还是直接调用模块的主要目的是让系统有层次、利于维护
+
+## 11. 享元模式
+
+1. 享元模式`Flyweight Pattern`也叫蝇量模式：运用共享技术有效地支持大量细粒度的对象
+2. 常用于系统底层开发，解决系统的性能问题。像数据库连接池，里面都是创建好的连接对象，在这些连接对象中有我们需要的则直接拿来用，避免重新创建，如果没有则新建一个
+3. 享元模式能够与解决重复对象的内存浪费的问题。当系统中有大量相似对象，需要缓冲池时。不需总是创建新对象，可以从缓冲池里拿。这样可以降低系统内存，同时提高效率
+4. 享元模式的应用场景就是池技术，`String`常量池、数据库连接池、缓冲池等等都是享元模式的应用，享元模式是池技术的重要实现方式
+
+### 11.1 工作原理
+
+```mermaid
+classDiagram
+class FlyWeightFactory {
+	-Flyweight: flyweight
+	+getFlyweight(key)
+}
+class FlyWeight {
+	<<abstract>>
+	+operation()
+}
+class ConcreteFlyWeight {
+	
+}
+class UnsharedConcreteFlyWeight {
+	
+}
+class Client {
+	
+}
+Client --> FlyWeightFactory
+Client --> ConcreteFlyWeight
+Client --> UnsharedConcreteFlyWeight
+
+FlyWeightFactory o--> FlyWeight
+ConcreteFlyWeight --|> FlyWeight
+UnsharedConcreteFlyWeight --|> FlyWeight
+```
+
+1. `FlyWeight`是抽象的享元角色，它是产品的抽象类，同时定义出对象的外部状态和内部状态的接口或实现
+2. `ConcreteFlyWeight`是具体的享元角色，是具体的产品类，实现抽象角色定义相关业务
+3. `UnsharedConcreteFlyWeight`不可共享的角色，一般不会出现在享元工厂中
+4. `FlyWeightFactory`享元工厂类，用于构建一个池容器(集合)，同时提供从池中获取对象的方法
+
+> **状态**
+
+1. 享元模式提供了两个要求：细粒度和共享对象。这里就涉及到了内部状态和外部状态了，即将对象的信息分为两个部分：内部状态和外部状态
+2. 内部状态是指对象共享出来的信息，存储在享元对象内部且不会随环境的改变而改变
+3. 外部状态指对象得以依赖的一个标记，是随环境变化而变化，不可共享的状态
+
+### 11.2 需求分析
+
+给客户`A`做一个产品展示网站，客户`A`的朋友感觉效果不错，也希望做这样的产品展示网站，但是要求有些不同
+
+1. 有客户要以新闻的形式发布
+2. 有客户要求以博客的形式发布
+3. 有客户希望以微信公众号的形式发布
+
+```mermaid
+classDiagram
+class WebSite {
+	<<abstract>>
+	+use() void
+}
+class ConcreteWebSite {
+	<<内部状态>>
+	+use() void
+}
+class WebSiteFactory {
+	+getWebSiteCategory() void
+}
+class Client {
+	+getWebSiteCategory() void
+}
+class User {
+	<<外部状态>>
+}
+ConcreteWebSite --|> WebSite
+WebSite --o WebSiteFactory
+Client ..> WebSiteFactory
+User <|-- ConcreteWebSite
+User <|-- Client
+Client ..> ConcreteWebSite
+```
+
+### 11.3 具体实现
+
+1. 享元抽象类
+
+   ```java
+   public abstract class WebSite {
+       public abstract void use(User user);
+   }
+   ```
+
+2. 外部状态``
+
+   ```java
+   public class User {
+       private String name;
+   
+       public String getName() {
+           return name;
+       }
+   
+       public void setName(String name) {
+           this.name = name;
+       }
+   }
+   ```
+
+3. 享元对象类
+
+   ```java
+   public class ConcreteWebSite extends WebSite{
+       private final String type; // 网站发布的形式, 共享部分
+   
+       public ConcreteWebSite(String type) {
+           this.type = type;
+       }
+   
+       @Override
+       public void use(User user) {
+    		System.out.println("网站的发布形式为: " + type + "\t用户为: " + user.getName());
+       }
+   }
+   ```
+
+4. 享元工厂类
+
+   ```java
+   public class WebSiteFactory {
+       // 网站池
+       private final Map<String, ConcreteWebSite> pool = new HashMap<>();
+       // 根据网站的类型，返回一个网站，如果没有就创建一个并放入到池中并返回
+       public WebSite getWebSiteCategory(String type) {
+           if (!pool.containsKey(type)) {
+               pool.put(type, new ConcreteWebSite(type));
+           }
+           return pool.get(type);
+       }
+   
+       // 获取网站分类的总数
+       public int getWebSiteSize() {
+           return pool.size();
+       }
+   }
+   ```
+
+5. 测试
+
+   ```java
+   public class Client {
+       @Test
+       @DisplayName("测试享元模式")
+       public void test() {
+           WebSiteFactory factory = new WebSiteFactory();
+   
+           // 发布新闻网站
+           WebSite news = factory.getWebSiteCategory("news");
+           news.use(new User("tom")); // 网站的发布形式为: news	用户为: tom
+   
+           // 发布博客
+           WebSite blog = factory.getWebSiteCategory("blog");
+           blog.use(new User("jack")); // 网站的发布形式为: blog	用户为: jack
+   
+           // 获取总数
+           System.out.println(factory.getWebSiteSize()); // 2
+       }
+   }
+   ```
+
+## 12. 代理模式
+
+1. 代理模式：对一个对象提供一个替身，以控制对这个对象的访问。即通过代理对象访问目标对象。这样做的好处：可以在目标对象实现的基础上，增强额外的功能操作，即可扩展目标对象的功能
+2. 被代理的对象可以是与远程对象、创建开销大的对象或需要安全控制的对象
+3. 代理模式有不同的形式，主要有三种静态代理、动态代理和`Cglib`代理(可以在内存中动态的创建对象，可以不实现接口)
+
+### 12.1 静态代理
+
+#### 12.1.1 基本介绍
+
+```mermaid
+classDiagram
+class ProxyObject {
+	
+}
+class TargetObject {
+	+operation1() void
+	+operation2() void
+}
+class Client {
+	
+}
+TargetObject <.. ProxyObject
+ProxyObject <.. Client
+```
+
+- `Client`要访问`TargetObject`不是直接访问而是经过代理类`ProxyObject`
+- 静态代理在使用时，需要定义接口或者父类，被代理对象(即目标对象)与代理对象一起实现相同的接口或者是继承相同的父类
+
+> **优缺点**
+
+1. 优点：在不修改目标对象的功能前提下，能通过代理对象对目标功能扩展
+2. 缺点：因为代理对象需要与目标对象实现一样的接口，所以会有很多代理类
+3. 一旦接口增加方法，目标对象与代理对象都要维护
+
+#### 12.1.2 案例演示
+
+```mermaid
+classDiagram
+class TeacherDao {
+	+teach() void
+}
+class ITeacherDao {
+	<<interface>>
+	+teach() void
+}
+class TeacherDaoProxy {
+	+teach() void
+}
+class Client {
+	+teach() void
+}
+ITeacherDao <|.. TeacherDao
+ITeacherDao <|.. TeacherDaoProxy
+TeacherDaoProxy o-- TeacherDao
+TeacherDaoProxy ..> Client
+TeacherDao ..> Client
+```
+
+1. 接口
+
+   ```java
+   public interface ITeacherDao {
+       void teach(); // 授课方法
+   }
+   ```
+
+2. 被代理类
+
+   ```java
+   public class TeacherDao implements ITeacherDao{
+       @Override
+       public void teach() {
+           System.out.println("老师正在授课...");
+       }
+   }
+   ```
+
+3. 代理类
+
+   ```java
+   public class TeacherDaoProxy implements ITeacherDao{
+       // 目标对象
+       private final ITeacherDao target;
+   
+       public TeacherDaoProxy(ITeacherDao target) {
+           this.target = target;
+       }
+   
+       @Override
+       public void teach() {
+           System.out.println("代理开始....");
+           target.teach();
+           System.out.println("代理结束....");
+       }
+   }
+   ```
+
+4. 测试
+
+   ```java
+   public class Client {
+       @Test
+       @DisplayName("静态代理")
+       public void test() {
+           // 被代理对象
+           TeacherDao teacherDao = new TeacherDao();
+   
+           // 代理对象
+           TeacherDaoProxy proxy = new TeacherDaoProxy(teacherDao);
+   
+           // 通过代理对象，调用到被代理对象的方法
+           proxy.teach();
+           // 代理开始....
+           // 老师正在授课...
+           // 代理结束....
+       }
+   }
+   ```
+
+### 12.2 动态代理
+
+1. 代理对象不需要实现接口，但是目标对象要实现接口，否则不能使用动态代理
+2. 代理对象的生成，是利用`JDK`的`API`，动态的在内存中构建代理对象
+3. 动态代理也叫做：`JDK`代理、接口代理
+
+```mermaid
+classDiagram
+class ITeacherDao {
+	<<interface>>
+	+teach() void
+}
+class TeacherDao {
+	+teach() void
+}
+class ProxyFactory {
+	+ProxyFactory()
+	+getProxyInstance() Object
+}
+ITeacherDao <|.. TeacherDao
+TeacherDao <.. Client
+ProxyFactory <.. Client
+```
+
+> **具体实现**
+
+1. 接口
+
+   ```java
+   public interface ITeacherDao {
+       void teach();
+   }
+   ```
+
+2. 被代理类
+
+   ```java
+   public class TeacherDao implements ITeacherDao{
+       @Override
+       public void teach() {
+           System.out.println("老师正在授课");
+       }
+   }
+   ```
+
+3. 代理类
+
+   ```java
+   public class ProxyFactory {
+       // 维护一个目标对象
+       private final Object target;
+   
+       public ProxyFactory(Object target) {
+           this.target = target;
+       }
+   
+       // 给目标对象生成代理对象
+       public Object getProxyInstance() {
+           // loader 指定当前目标对象使用的类加载器
+           // interfaces 目标对象实现的接口类型, 使用泛型的方法确认类型
+           // h 事件处理, 执行目标对象的方法时, 会触发事件处理方法，会把当前执行的目标对象的方法作为参数传入
+           return Proxy.newProxyInstance(target.getClass().getClassLoader(),
+                                         target.getClass().getInterfaces(),
+                                         new InvocationHandler() {
+                                             @Override
+                                             public Object invoke(Object proxy, Method method, Object[] args) throws Throwable {
+                                                 System.out.println("JDK代理开始");
+                                                 Object result = method.invoke(target, args);
+                                                 System.out.println("JDK代理结束");
+                                                 return result;
+                                             }
+                                         });
+       }
+   }
+   ```
+
+4. 测试
+
+   ```java
+   public class Client {
+       @Test
+       @DisplayName("动态代理")
+       public void test() {
+           // 创建目标对象
+           ITeacherDao target = new TeacherDao();
+   
+           // 创建代理对象
+           ProxyFactory proxy = new ProxyFactory(target);
+   
+           ITeacherDao proxyInstance = (ITeacherDao)proxy.getProxyInstance();
+           proxyInstance.teach();
+       }
+   }
+   ```
+
+### 12.3 Cglib代理
+
+1. 静态代理和`JDK`代理模式都要求目标对象实现一个接口，但是有时候目标对象只是一个单独的对象，并没有实现任何的接口，这个时候可使用目标对象子类来实现代理，这就是`Cglib`代理
+2. `Cglib`代理也叫做子类代理，它是内存中构建一个子类对象从而实现对目标对象功能扩展，有些书也将`Cglib`代理归属到动态代理
+3. `Cglib`是一个强大的高性能的代码生成包，它可以在运行期扩展`java`类与实现`java`接口。它广泛的被许多`AOP`的框架使用，例如`Spring AOP`，实现方法拦截
+4. 在`AOP`变成中如何选择代理模式
+   1. 目标对象需要实现接口，用`JDK`代理
+   2. 目标对象不需要实现接口，用`Cglib`代理
+5. `Cglib`包的底层是通过使用字节码处理框架`ASM`来转换字节码并生成新的类
