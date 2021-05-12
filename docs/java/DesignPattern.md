@@ -3337,3 +3337,1351 @@ ProxyFactory <.. Client
    1. 目标对象需要实现接口，用`JDK`代理
    2. 目标对象不需要实现接口，用`Cglib`代理
 5. `Cglib`包的底层是通过使用字节码处理框架`ASM`来转换字节码并生成新的类
+
+#### 12.3.1 具体事项
+
+> **相关依赖**
+
+```xml
+<dependency>
+    <groupId>org.ow2.asm</groupId>
+    <artifactId>asm</artifactId>
+    <version>9.1</version>
+</dependency>
+<dependency>
+    <groupId>org.ow2.asm</groupId>
+    <artifactId>asm-commons</artifactId>
+    <version>9.1</version>
+</dependency>
+<dependency>
+    <groupId>org.ow2.asm</groupId>
+    <artifactId>asm-tree</artifactId>
+    <version>9.1</version>
+</dependency>
+<dependency>
+    <groupId>cglib</groupId>
+    <artifactId>cglib</artifactId>
+    <version>3.3.0</version>
+</dependency>
+```
+
+> **注意**
+
+在内存中动态构建子类，注意代理的类不能为`final`。目标对象的方法如果为`final/static`，那么就不会被拦截，即不会执行目标对象额外的业务方法
+
+#### 12.3.2 实现
+
+```mermaid
+classDiagram
+class TeacherDao {
+	+teach() void
+}
+class ProxyFactory {
+	-target: Object
+	+ProxyFactory(TeacherDao target) void
+	+getProxyInstance() Object
+	+interceptor() viud
+}
+class MethodInterceptor {
+	+teach() void
+}
+class Client {
+	
+}
+MethodInterceptor <|-- ProxyFactory
+ProxyFactory <.. Client
+TeacherDao <.. Client
+```
+
+`getInstance`给目标对象`target`创建一个代理对象，重写`inteceptor`方法，实现对被代理对象方法调用
+
+1. 被代理对象
+
+   ```java
+   public class TeacherDao {
+       public void teach() {
+           System.out.println("老师授课中...");
+       }
+   }
+   ```
+
+2. 代理工厂
+
+   ```java
+   public class ProxyFactory implements MethodInterceptor {
+       private final Object target; // 被代理对象
+   
+       public ProxyFactory(Object target) {
+           this.target = target;
+       }
+   
+       public Object getProxyInstance() {
+           Enhancer enhancer = new Enhancer();         // 1. 创建一个工具类
+           enhancer.setSuperclass(target.getClass());  // 2. 设置父类
+           enhancer.setCallback(this);                 // 3. 设置回调函数
+           return enhancer.create();                   // 4. 创建代理对象
+       }
+   
+       @Override
+       public Object intercept(Object o, Method method, Object[] args, MethodProxy methodProxy) throws Throwable {
+           System.out.println("代理开始...");
+           Object result = method.invoke(target, args);
+           System.out.println("代理结束...");
+           return result;
+       }
+   }
+   ```
+
+3. 测试
+
+   ```java
+   public class Client {
+       @Test
+       @DisplayName("Cglib代理")
+       public void test() {
+           // 创建目标对象
+           TeacherDao teacherDao = new TeacherDao();
+   
+           // 创建代理工厂
+           ProxyFactory proxyFactory = new ProxyFactory(teacherDao);
+   
+           // 获取代理对象
+           TeacherDao instance = (TeacherDao)proxyFactory.getProxyInstance();
+           instance.teach();
+           // 代理开始...
+           // 老师授课中...
+           // 代理结束...
+       }
+   }
+   ```
+
+### 12.4 代理模式的变体
+
+1. 防火墙代理
+
+   内网通过代理穿透防火墙，实现对公网的访问
+
+2. 缓存代理
+
+   当请求图片文件等资源时，先到缓存代理取，如果取到则返回，取不到到服务器取，然后返回
+
+3. 远程代理
+
+   远程对象的本地代表，通过它可以把远程对象当本地对象来调用。远程代理通过网络和真正的远程对象沟通信息
+
+4. 同步代理
+
+   主要使用在多线程编程中，完成多线程间同步工作
+
+## 13. 模板方法模式
+
+### 13.1 基本介绍
+
+1. 模板方法模式`Template Method Pattern`，又叫模板模式`Template Pattern`，在一个抽象类公开定义了执行它的方法的模板。它的子类可以按照需要重写方法实现，但调用将以抽象类中定义的方法进行
+2. 模板方法模式就是定义一个操作中的算法骨架，而将一些步骤延迟到子类中，使得子类可以不改变一个算法的结构，就可以重定义该算法的某些特定步骤
+3. 输入行为型模式
+
+### 13.2 案例分析
+
+制作豆浆的流程和要求
+
+1. 选材-->添加配料-->浸泡-->豆浆机打磨
+2. 通过添加不同的配料，可以制作出不同口味的豆浆
+3. 选材、浸泡和放到豆浆机打碎这几个步骤对于制作每种口味(红豆豆浆、花生豆浆)的豆浆都是一样的
+
+```mermaid
+classDiagram
+class SoyMilk {
+	+make() void
+	+select() void
+	+add() void
+	+soak() void
+    +beat() void
+}
+class BlackSoyMilk {
+	+select() void
+}
+class PennutSoyMilk {
+	+select() void
+}
+class Client {
+	+select() void
+}
+Client ..> BlackSoyMilk
+Client ..> SoyMilk
+Client ..> PennutSoyMilk
+SoyMilk <|-- BlackSoyMilk
+SoyMilk <|-- PennutSoyMilk
+
+```
+
+### 13.3 具体实现
+
+1. 豆浆类
+
+   ```java
+   public abstract class SoyMilk {
+       public void make() {
+           select();
+           add();
+           soak();
+           beat();
+       }
+   
+       private void select() {
+           System.out.println("选材料");
+       }
+   
+       // 添加配料
+       public abstract void add();
+   
+       private void soak() {
+           System.out.println("浸泡");
+       }
+   
+       private void beat() {
+           System.out.println("豆浆机打豆浆");
+       }
+   }
+   ```
+
+2. 实现子类
+
+   ```java
+   // 红豆
+   public class RedSoyMilk extends SoyMilk{
+       @Override
+       public void add() {
+           System.out.println("加入红豆");
+       }
+   }
+   
+   // 花生
+   public class PeanutSoyMilk extends SoyMilk{
+       @Override
+       public void add() {
+           System.out.println("加入花生");
+       }
+   }
+   ```
+
+3. 测试
+
+   ```java
+   public class Client {
+       @Test
+       @DisplayName("模板模式")
+       public void test() {
+           System.out.println("===制作红豆豆浆===");
+           SoyMilk redSoyMilk = new RedSoyMilk();
+           redSoyMilk.make();
+   
+           System.out.println("===制作花生豆浆===");
+           SoyMilk peanutSoyMilk = new PeanutSoyMilk();
+           peanutSoyMilk.make();
+       }
+   }
+   ```
+
+### 13.4 钩子方法
+
+在模板方法模式的父类中，我们可以定义一个方法，它默认不做任何事情，子类可以视情况要不要覆盖它，该方法称为钩子
+
+上述案例中，如果想要制作纯豆浆，只需要在抽象类中天加方法`isAdd()`方法，提供默认实现，子类根据需要确定是否需要添加配料
+
+```java
+public abstract class SoyMilk {
+    public void make() {
+        select();
+        if (isAdd()) {
+            add();
+        }
+        soak();
+        beat();
+    }
+
+    private void select() {
+        System.out.println("选材料");
+    }
+
+    // 添加配料
+    public abstract void add();
+
+    private void soak() {
+        System.out.println("浸泡");
+    }
+
+    private void beat() {
+        System.out.println("豆浆机打豆浆");
+    }
+
+    // 钩子方法，决定是否需要添加配料
+    public boolean isAdd() {
+        return true;
+    }
+}
+```
+
+## 14. 命令模式
+
+### 14.1 基本介绍
+
+1. 命令行模式`Command Pattern`：在软件设计中，我们经常需要向某些对象发送请求，但是并不知道请求的接受者是谁，也不知道被请求的操作是哪个，我们只需在程序运行时指定具体的请求接受者即可，此时，可以使用命令模式来进行设计
+2. 命令模式使得请求发送者与请求接受者消除彼此之间的耦合，让对象之间的调用关系更加灵活，实现解藕
+3. 在命名模式中，会将一个请求封装为一个对象，以便使用不同参数来表示不同的请求，同时命令行模式也支持可撤销的操作
+4. 几个角色：`Invoker`调用者、`Recevier`被调用者、`ConcreteCommand`命令(聚合接受对象)、`Command`命令接口/抽象类
+
+```mermaid
+classDiagram
+class Command {
+	<<interface>>
+	+execute() void
+	+undo() void
+}
+class ConcreteCommand {
+	-receiver: Receiver
+	+execute() void
+	+undo() void
+}
+class Receiver {
+	+action() void
+}
+class Invoker {
+	
+}
+Command <|.. ConcreteCommand
+ConcreteCommand o.. Receiver
+Command --o Invoker
+```
+
+
+
+### 14.2 项目分析
+
+一套智能家电，只需要在手机上安装`app`就可以进行使用，但智能家电来自不同的厂商，我们想要只安装一个`app`就能实现对所有的设备的控制
+
+```mermaid
+classDiagram
+class Command {
+	<<interface>>
+	+execute() void
+	+undo() void
+}
+class NoCommand {
+	<<空命令>>
+}
+class LightOnCommand {
+	<<电灯开命令>>
+    -receiver LightReceiver 
+	+execute() void
+	+undo() void
+}
+class LightOffCommand {
+	<<电灯关命令>>
+    -receiver LightReceiver 
+	+execute() void
+	+undo() void
+}
+class LightReceiver {
+	<<电灯接受者>>
+	+on() void
+	+off() void
+}
+class RemoteController {
+	<<命令执行者>>
+	-onCommands: Command[]
+    -offCommands: Command[]
+}
+RemoteController o-- Command
+Command <|.. LightOnCommand
+Command <|-- NoCommand
+Command <|.. LightOffCommand
+LightOnCommand o-- LightReceiver
+LightOffCommand o-- LightReceiver
+Client ..> LightOnCommand
+Client ..> RemoteController
+Client ..> LightOffCommand
+```
+
+空命令(接口方法置空)用于简化操作，省去对空的判断
+
+### 14.3 具体实现
+
+1. 命令接口
+
+   ```java
+   public interface Command {
+       void execute(); // 执行命令
+       void undo();    // 撤销命令
+   }
+   ```
+
+2. 命令的被调用者
+
+   ```java
+   public class LightReceiver {
+   
+       public void on() {
+           System.out.println("电灯打开了");
+       }
+   
+       public void off() {
+           System.out.println("电灯关闭了");
+       }
+   }
+   ```
+
+3. 具体的命令
+
+   ```java
+   // LightOnCommand
+   public class LightOnCommand implements Command{
+       private final LightReceiver light;
+   
+       public LightOnCommand(LightReceiver light) {
+           this.light = light;
+       }
+   
+       @Override
+       public void execute() {
+           light.on(); // 调用接受者的方法
+       }
+   
+       @Override
+       public void undo() {
+           light.off();
+       }
+   }
+   
+   // LightOffCommand
+   public class LightOffCommand implements Command{
+       private final LightReceiver light;
+   
+       public LightOffCommand(LightReceiver light) {
+           this.light = light;
+       }
+   
+       @Override
+       public void execute() {
+           light.off(); // 调用接受者的方法
+       }
+   
+       @Override
+       public void undo() {
+           light.on();
+       }
+   }
+   
+   // NoCommand
+   public class NoCommand implements Command{
+       @Override
+       public void execute() {
+   
+       }
+   
+       @Override
+       public void undo() {
+   
+       }
+   }
+   ```
+
+4. 命令调用者
+
+   ```java
+   public class RemoteController {
+       // 开按钮
+       private final Command[] onCommands;
+       private final Command[] offCommands;
+   
+       // 撤销命令
+       private Command undo;
+   
+       public RemoteController() {
+           onCommands = new Command[5];
+           offCommands = new Command[5];
+           for (int i = 0; i < 5; i++) {
+               setCommand(i, new NoCommand(), new NoCommand());
+           }
+       }
+   
+       // 给指定按钮设置命令
+       public void setCommand(int num, Command on, Command off) {
+           onCommands[num] = on;
+           offCommands[num] = off;
+       }
+   
+       // 按下开按钮
+       public void onButtonWasPushed(int num) {
+           // 找到你按下的开的按钮，并调用对应方法
+           onCommands[num].execute();
+           // 记录这次的操作，用于撤销
+           undo = onCommands[num];
+       }
+   
+       // 按下关按钮
+       public void offButtonWasPushed(int num) {
+           // 找到你按下的关的按钮，并调用对应方法
+           offCommands[num].execute();
+           // 记录这次的操作，用于撤销
+           undo = offCommands[num];
+       }
+       
+       // 按下撤销按钮
+       public void undoButtonWasPushed() {
+           undo.undo();
+       }
+   }
+   ```
+
+5. 测试
+
+   ```java
+   public class Client {
+       @Test
+       @DisplayName("命令模式")
+       public void test() {
+           // 创建电灯接受者
+           LightReceiver receiver = new LightReceiver();
+   
+           // 创建电灯相关的开关命令
+           LightOnCommand lightOnCommand = new LightOnCommand(receiver);
+           LightOffCommand lightOffCommand = new LightOffCommand(receiver);
+   
+           // 创建控制器
+           RemoteController remoteController = new RemoteController();
+   
+           // 设置相关命令
+           remoteController.setCommand(0, lightOnCommand, lightOffCommand);
+   
+           System.out.println("===按下开===");
+           remoteController.onButtonWasPushed(0);
+           System.out.println("===按下关===");
+           remoteController.offButtonWasPushed(0);
+           System.out.println("===撤销===");
+           remoteController.undoButtonWasPushed();
+       }
+   }
+   ```
+
+以后添加其他智能家居时，只需要添加响应的命令和接受者，不需要修改命令的调用者`remoteController`
+
+## 15. 访问者模式
+
+### 15.1 基本介绍
+
+1. 访问者模式`Visitor Pattern`，封装一些作用于某种数据结构的个元素的操作，它可以在不改变数据结构的前提下定义作用于这些元素的新的操作
+2. 主要将数据结构与数据操作分离，解决数据结构和操作耦合性问题
+3. 访问者模式的基本原理是：在被访问的类里面加一个对外提供接待访问者的结构
+4. 访问者模式主要应用场景是：需要对一个对象结构中的对象进行很多不同操作(这些操作彼此没有关联，同时需要避免让这些操作“污染”这些对象的类，可以使用访问者模式解决
+
+```mermaid
+classDiagram
+class Visitor {
+	<<interface>>
+	+operation1() void
+    +operation2() void
+}
+class ConcreteVisitor {
+	+operation1() void
+    +operation2() void
+}
+class Element {
+	+accept(Visitor visitor) void
+}
+class ConcreteElement {
+	+accept(Visitor visitor) void
+}
+class ObjectStruture {
+	-element: Element
+}
+Visitor <|.. ConcreteVisitor
+Visitor <.. Element
+Element --o ObjectStruture
+Element <|-- ConcreteElement
+```
+
+> **上图说明**
+
+1. `Visitor`是抽象访问者，为该对象结构中的`ConcreteElement`的每一个类声明一个`visit`操作
+2. `ConcreteVisitor`是一个具体的访问者实现每个有`Visitor`声明的操作，是每个操作实现的部分
+3. `ObjectStructure`能枚举它的元素，可以提供一个高层的接口，用来允许访问者访问元素
+4. `Element`定义一个`accept`方法，接受一个访问者对象
+5. `ConcreteElement`为具体元素，实现了`accept`方法
+
+### 15.2 案例分析
+
+测评系统开发：将观众分为男人和女人，对歌手进行测评，当看完某个歌手表演后，得到他们对该歌手不同的评价(成功、失败)
+
+```mermaid
+classDiagram
+class Action {
+	<<interface>>
+	+operation1() void
+	+operation2() void
+}
+class Success {
+	+operation1() void
+	+operation2() void
+}
+class Fail {
+	+operation1() void
+	+operation2() void
+}
+class Person {
+	<<interface>>
+	+accept(Action action) void
+}
+class Man {
+	+accept(Action action) void
+}
+class Woman {
+	+accept(Action action) void
+}
+class ObjectStructure {
+	-elements: Person
+}
+class Client {
+	
+}
+Action <|.. Success
+Action <|.. Fail
+Action -- Person
+Person <|-- Man
+Person <|-- Woman
+ObjectStructure o-- Person
+Client ..> Action
+Client ..> ObjectStructure
+```
+
+### 15.3 具体实现
+
+1. `Person`
+
+   ```java
+   public interface Person {
+       void accept(Action action);
+   }
+   ```
+
+2. `Person`的实现类
+
+   ```java
+   // Man
+   public class Man implements Person{
+       @Override
+       public void accept(Action action) {
+           action.getManResult(this);
+       }
+   }
+   
+   // Woman
+   public class Woman implements Person {
+       @Override
+       public void accept(Action action) {
+           action.getWomanResult(this);
+       }
+   }
+   ```
+
+3. `Action`
+
+   ```java
+   public interface Action {
+       // 得到男性的评测
+       void getManResult(Man man);
+       // 获取女性的评测
+       void getWomanResult(Woman woman);
+   }
+   ```
+
+4. `Action`的实现类
+
+   ```java
+   // Success
+   public class Success implements Action {
+       @Override
+       public void getManResult(Man man) {
+           System.out.println("男性给成功的评价...");
+       }
+   
+       @Override
+       public void getWomanResult(Woman woman) {
+           System.out.println("女性给成功的评价...");
+       }
+   }
+   
+   // Fail
+   public class Fail implements Action {
+   
+       @Override
+       public void getManResult(Man man) {
+           System.out.println("男性给失败的评价...");
+       }
+   
+       @Override
+       public void getWomanResult(Woman woman) {
+           System.out.println("女性给失败的评价...");
+       }
+   }
+   ```
+
+5. `ObjectStructure`
+
+   ```java
+   public class ObjectStructure {
+       private final List<Person> persons = new LinkedList<>();
+   
+       // 添加
+       public void attach(Person person) {
+           persons.add(person);
+       }
+   
+       // 移除
+       public void detach(Person person) {
+           persons.remove(person);
+       }
+   
+       // 显示测评情况
+       public void display(Action action) {
+           for (Person p : persons) {
+               p.accept(action);
+           }
+       }
+   }
+   ```
+
+6. 测试
+
+   ```java
+   public class Client {
+       @Test
+       @DisplayName("观察者模式")
+       public void test() {
+          ObjectStructure objectStructure = new ObjectStructure();
+   
+          objectStructure.attach(new Man());
+          objectStructure.attach(new Woman());
+   
+          Success success = new Success();
+          objectStructure.display(success);
+          // 男性给成功的评价...
+   	   // 女性给成功的评价...
+       }
+   }
+   ```
+
+## 16. 迭代器模式
+
+### 16.1 基本介绍
+
+1. 迭代器模式`Iterator Pattern`是常用的设计模式，属于行为型模式
+2. 如果我们的结合元素是用不同的方式实现的，有数组，还有`java`集合类，或者还有其他方式，当客户端要遍历这些集合元素的时候就要使用多种遍历方式，而且还会暴露元素的内部结构，可以考虑使用迭代器模式解决
+3. 迭代器模式，提供一种遍历集合元素的统一接口，即：不暴露其内部结构
+
+```mermaid
+classDiagram
+class Iterator {
+	<<interface>>
+	+hasNext() boolean
+	+next() E
+	+remove() void
+}
+class ConcreteIterator {
+	+hasNext() boolean
+	+next() E
+	+remove() void
+}
+class Aggregate {
+	+iterator() Iterator
+}
+class ConcreteAggregate {
+	-elements: E[]
+	+iterator() Iterator
+}
+class Client {
+	
+}
+Client ..> Aggregate
+Client ..> Iterator
+Iterator <|.. ConcreteIterator
+Aggregate <|.. ConcreteAggregate
+ConcreteAggregate ..> ConcreteIterator
+```
+
+> **上图说明**
+
+1. `Iterator`：迭代器接口，是系统提供
+2. `ConcreteIterator`：具体迭代器类，管理迭代
+3. `Aggregate`：一个同一的聚合接口，将客户端和具体聚合解藕
+4. `ConcreteAggreage`：具体元素聚合类
+
+### 16.2 案例分析
+
+与[组合模式](#9.组合模式)中使用的例子相似，只不过是实现输出院系的名字
+
+```mermaid
+classDiagram
+class Iterator {
+	<<interface>>
+	+hasNext() boolean
+	+next() E
+	+remove() void
+}
+class ComputerCollegeIterator {
+	+hasNext() boolean
+	+next() E
+	+remove() void
+}
+class InfoColleageIterator {
+	+hasNext() boolean
+	+next() E
+	+remove() void
+}
+class Department {
+	-name: String
+	-desc: String
+}
+class College {
+	<<interface>>
+	+iterator() Iterator
+}
+class CompouterCollege {
+	+iterator() Iterator
+}
+class InfoCollege {
+	+iterator() Iterator
+}
+class OutputImpl {
+	
+}
+class Client {
+	
+}
+Client ..> OutputImpl
+Client ..> Iterator
+OutputImpl o-- College
+College <|.. CompouterCollege
+College <|.. InfoCollege
+Iterator <|.. ComputerCollegeIterator
+CompouterCollege ..> ComputerCollegeIterator
+Iterator <|.. InfoColleageIterator
+InfoCollege ..> InfoColleageIterator
+ComputerCollegeIterator o-- Department
+InfoColleageIterator o-- Department
+CompouterCollege o-- Department
+InfoCollege o-- Department
+```
+
+### 16.3 具体实现
+
+1. 学院
+
+   ```java
+   public class Department {
+       private String name;
+       private String desc;
+   
+       public Department(String name, String desc) {
+           this.name = name;
+           this.desc = desc;
+       }
+   
+   	// getter setter
+   }
+   ```
+
+2. 学院迭代器实现
+
+   ```java
+   // ComputerCollegeIterator
+   public class ComputerCollegeIterator implements Iterator<Department> {
+       private final Department[] departments;
+       private int position = 0; // 遍历的位置
+   
+       public ComputerCollegeIterator(Department[] departments) {
+           this.departments = departments;
+           this.position = 0;
+       }
+   
+       @Override
+       public boolean hasNext() {
+           return position < departments.length && departments[position] != null;
+       }
+   
+       @Override
+       public Department next() {
+           return departments[position++];
+       }
+   
+       @Override
+       public void remove() {
+       }
+   }
+   
+   // InfoCollegeIterator
+   public class InfoCollegeIterator implements Iterator<Department> {
+       private final List<Department> departments;
+       private int position = -1;
+   
+       public InfoCollegeIterator(List<Department> departments) {
+           this.departments = departments;
+       }
+   
+       @Override
+       public boolean hasNext() {
+           return position < departments.size() - 1;
+       }
+   
+       @Override
+       public Department next() {
+           return departments.get(++position);
+       }
+   
+       @Override
+       public void remove() {
+   
+       }
+   }
+   ```
+
+3. `College`接口
+
+   ```java
+   public interface College<E> {
+       String getName();                               // 获取系名字
+       void addDepartment(String name, String desc);   // 增加系
+       Iterator<E> iterator();                         // 获取迭代器
+   }
+   ```
+
+4. 具体的院系类
+
+   ```java
+   // ComputerCollege
+   public class ComputerCollege implements College<Department>{
+   
+       private final Department[] departments;
+       private int size = 0; // 数组当前对象的个数
+   
+       public ComputerCollege() {
+           departments = new Department[5];
+           addDepartment("Java", "Java专业");
+           addDepartment("PHP", "PHP专业");
+           addDepartment("Python", "Python专业");
+           addDepartment("前端", "JavaScript专业");
+       }
+   
+       @Override
+       public String getName() {
+           return "计算机学院";
+       }
+   
+       @Override
+       public void addDepartment(String name, String desc) {
+           departments[size++] = new Department(name, desc);
+       }
+   
+       @Override
+       public Iterator<Department> iterator() {
+           return new ComputerCollegeIterator(departments);
+       }
+   }
+   
+   // InfoCollege
+   public class InfoCollege implements College<Department>{
+       private final List<Department> departments;
+   
+       public InfoCollege() {
+           departments = new LinkedList<>();
+           addDepartment("信息安全", "信息安全专业");
+           addDepartment("网络安全", "网络安全专业");
+           addDepartment("服务器安全", "服务器安全专业");
+       }
+   
+       @Override
+       public String getName() {
+           return "信息工程学院";
+       }
+   
+       @Override
+       public void addDepartment(String name, String desc) {
+           departments.add(new Department(name, desc));
+       }
+   
+       @Override
+       public Iterator<Department> iterator() {
+           return new InfoCollegeIterator(departments);
+       }
+   }
+   ```
+
+5. 输出类
+
+   ```java
+   public class OutPutImpl {
+       private List<College<Department>> list;
+   
+       public OutPutImpl(List<College<Department>> list) {
+           this.list = list;
+       }
+   
+       // 遍历学院
+       public void printCollege() {
+           Iterator<College<Department>> iterator = list.iterator();
+           while (iterator.hasNext()) {
+               College<Department> next = iterator.next();
+               System.out.println("===" + next.getName() + "===");
+               printDepartment(next.iterator());
+           }
+       }
+   
+       // 学院输出系
+       public void printDepartment(Iterator<Department> iterator) {
+           System.out.println("---"+ "系" +"---");
+           while (iterator.hasNext()) {
+               System.out.println(iterator.next().getName());
+           }
+       }
+   }
+   ```
+
+6. 测试
+
+   ```java
+   public class Client {
+       @Test
+       @DisplayName("迭代器模式")
+       public void test() {
+           // 创建学院
+           List<College<Department>> list = new LinkedList<>();
+   
+           // 创建系
+           ComputerCollege computerCollege = new ComputerCollege();
+           InfoCollege infoCollege = new InfoCollege();
+           list.add(computerCollege);
+           list.add(infoCollege);
+   
+           // 打印
+           OutPutImpl outPut = new OutPutImpl(list);
+           outPut.printCollege();
+   //        ===计算机学院===
+   //        ---系---
+   //        Java
+   //        PHP
+   //        Python
+   //        前端
+   //        ===信息工程学院===
+   //        ---系---
+   //        信息安全
+   //        网络安全
+   //        服务器安全
+       }
+   }
+   ```
+
+### 16.4 优缺点
+
+> **优点**
+
+1. 提供一个同一的方法遍历对象，客户不用再考虑聚合的类型，使用一种方法就可以遍历对象
+2. 隐藏了聚合的内部结构，客户端要遍历聚合的时候只能取到迭代器，而不会知道聚合的具体细节
+3. 提供了一种设计思想，就是一个类应该只有一个引起变化的原因(单一责任原则)。在聚合类中，我们把迭代器分开，就是要把管理对象集合和遍历对象集合的原则分开，这样依赖集合改变的话，只影响到聚合对象。若干遍历集合改变的话，只影响到了迭代器
+4. 当要展示一组相似对象，或者遍历一组相同对象时使用，适合使用迭代器模式
+
+> **缺点**
+
+每个聚合对象都要一个迭代器，会生成多个迭代器不好管理类
+
+## 17. 观察者模式
+
+### 17.1 案例分析
+
+天气预报项目分析
+
+1. 气象站可以将每天测量到的温度、湿度、气压等等以公告的形式发布出去(发布到自己的网站或第三方)
+2. 需要设计开放型`API`，便于其他第三方也能接入到气象站获取数据
+3. 提供温度、气压和湿度的接口
+4. 测量数据更新时，要能实时的通知给第三方
+
+### 17.2 具体实现
+
+```mermaid
+classDiagram
+class Subject {
+	<<interface>>
+	+register(Observer o) void
+	+remove(Observer o) void
+	+notifyObservers() void
+}
+class WeatherData {
+	-observers: List
+}
+class Observer {
+	<<interface>>
+	+update() void
+}
+class CurrentCondition {
+	+update() void
+}
+class Baidu {
+	+update() void
+}
+class Sina {
+	+update() void
+}
+class Client {
+	
+}
+Client ..> Subject
+Client ..> Observer
+Subject <|.. WeatherData
+WeatherData o.. Observer
+Observer <.. Subject
+Observer <|.. CurrentCondition
+Observer <|.. Baidu
+Observer <|.. Sina
+```
+
+1. 观察者接口
+
+   ```java
+   public interface Observer {
+       void update(double temperature, double pressure, double humidity);
+   }
+   ```
+
+2. 提交接口
+
+   ```java
+   public interface Subject {
+       void register(Observer observer);
+       void remove(Observer observer);
+       void notifyObservers();
+   }
+   ```
+
+3. 具体观察者的实现类
+
+   ```java
+   public class CurrentConditions implements Observer{
+       private double temperature;
+       private double pressure;
+       private double humidity;
+   
+       @Override
+       public void update(double temperature, double pressure, double humidity) {
+           this.temperature = temperature;
+           this.pressure = pressure;
+           this.humidity = humidity;
+           display();
+       }
+   
+       public void display() {
+           System.out.println("温度: " + temperature);
+           System.out.println("气压: " + pressure);
+           System.out.println("湿度: " + humidity);
+       }
+   }
+   ```
+
+4. 发布者
+
+   ```java
+   public class WeatherData implements Subject{
+       private double temperature;
+       private double pressure;
+       private double humidity;
+   
+       private final List<Observer> observers;
+   
+       public WeatherData() {
+           observers = new LinkedList<>();
+       }
+   
+       public void setData(double temperature, double pressure, double humidity) {
+           this.temperature = temperature;
+           this.pressure = pressure;
+           this.humidity = humidity;
+           notifyObservers(); // 通知修改
+       }
+   
+       @Override
+       public void register(Observer observer) {
+           observers.add(observer); // 注册
+       }
+   
+       @Override
+       public void remove(Observer observer) {
+           observers.remove(observer); // 注销
+       }
+   
+       @Override
+       public void notifyObservers() {
+           for (Observer observer : observers) { // 更新
+               observer.update(temperature, pressure, humidity);
+           }
+       }
+   }
+   ```
+
+5. 测试
+
+   ```java
+   public class Client {
+       @Test
+       @DisplayName("观察者模式")
+       public void test() {
+           // 创建一个WeatherData
+           WeatherData weatherData = new WeatherData();
+   
+           // 创建观察者
+           CurrentConditions currentConditions = new CurrentConditions();
+   
+           // 这次到weatherData
+           weatherData.register(currentConditions);
+   
+           weatherData.setData(10, 100, 30.3);
+       }
+   }
+   ```
+
+## 18. 中介者模式
+
+### 18.1 基本介绍
+
+1. 中介者模式`Mediator Pattern`，用一个中介对象来封装一系列的对象交互，中介者使各个对象不需要显示地相互引用，从而使其耦松散，而且可以独立地改变它们之间的交互
+2. 中介者模式属于行为型模式
+
+```mermaid
+classDiagram
+class Mediator {
+	<<interface>>
+}
+class ConcreteMeditor {
+	-colleagues: Map
+}
+class Colleague {
+	<<interface>>
+}
+class ConcreteColleague {
+	+ConcreteColleague()
+}
+class Client {
+	
+}
+Client ..> Mediator
+Client ..> Colleague
+Mediator -- ConcreteColleague
+Mediator -- Colleague
+Colleague --o ConcreteMeditor
+Mediator <|-- ConcreteMeditor
+Colleague <|-- ConcreteColleague
+```
+
+> **上图说明**
+
+1. `Mediator`就是抽象中介者，定义了同事到中介者对象的接口
+2. `Colleague`抽象同事类
+3. `ConcreteMediator`具体的中介者对象，实现抽象方法，它会以集合的方式管理所有的具体的同事类，并接受某个同时对象的消息，完成相应的任务
+4. `ConcreteColleague`具体的同事类，会有很多，每个同事类只知道自己的行为，而不了解其他同事类的行为
+
+### 18.2 案例分析
+
+智能家庭项目
+
+1. 只能家庭包括各种设备、闹钟、咖啡机、电视机、窗帘等
+2. 家庭中的成员在看电视时，各个设备可以协同工作，自动完成看电视的准备工作，比如流程为：闹铃响起->咖啡机开始做咖啡->窗帘自动落下->电视机开始播放
+
+```mermaid
+classDiagram
+class Mediator {
+	<<interface>>
+    +register(String name, Colleague colleague) void
+    +getMessage(int stateChange, String name) void
+    +sendMessage() void
+}
+class ConcreteMediator {
+	-colleagueMap: HashMap
+	+getMessage() void
+}
+class Colleague {
+	<<interface>>
+	-mediator: Mediator
+	#name: String
+	+Colleague(Mediator mediator, String name) void
+	+sendMessage() void
+	+getMediator() Mediator
+}
+class Alarm {
+	
+}
+class CoffeeMachine {
+	
+}
+class Curtains {
+	
+}
+class TV {
+	
+}
+Mediator <|-- ConcreteMediator
+Mediator -- Colleague
+Mediator <.. Alarm
+Mediator <.. CoffeeMachine
+Mediator <.. Curtains
+Mediator <.. TV
+Colleague <|-- Alarm
+Colleague <|-- CoffeeMachine
+Colleague <|-- Curtains
+Colleague <|-- TV
+Colleague --o ConcreteMediator
+```
+
+> **执行流程**
+
+1. 创建中介者接口
+2. 创建`ConcreteMeidator`对象
+3. 创建各个同事类对象`Alarm`、`CoffeeMachine`、`Curtains`、`TV`，创建同事类的同时会通过构造器注入到`colleagueMap`中
+4. 同事类对象，可以调用`sendMessage`，最终去调用`ConcreteMediator`的`getMessage`方法
+5. `getMessage`(核心方法)会根据接受到的同时对象发出的消息协调调用其他的同事对象完成任务
+
+### 18.3 注意
+
+1. 多个类相互耦合，会形成网状结构，使用中介者模式将网状结构分离为星型结构，进行解藕
+2. 减少类间的依赖，降低了耦合
+3. 中介者承担了较多的责任，一旦中介者出现了问题，整个系统就会收到影响
+4. 如果设计不当，中介者对象本身会变得过于复杂。
+
+## 19. 备忘录模式
+
+### 19.1 基本介绍
+
+备忘录模式`Memento pattern`在不破坏封装性的前提下，不会一个对象的内部状态，并在该对象之外保存这个状态。这样以后就可将该对象恢复到原先保存的状态，属于行为型模式
+
+```mermaid
+classDiagram
+class Originator {
+	-state
+}
+class Memento {
+	-state
+}
+class Caretaker {
+	-mementos: ArrayList<Memento>
+}
+Client ..> Originator
+Client ..> Memento
+Originator ..> Memento
+Memento --o Caretaker
+```
+
+1. `Originator`：需要保存状态的对象
+2. `Memento`：备忘录对象，负责保存好状态，即`Originator`内部状态
+3. `Caretaker`：守护者对象，负责保存多个备忘录对象
+
+### 19.2 案例分析
+
+游戏角色状态恢复问题
+
+游戏角色有攻击了和防御力，在大战`Boss`前保存自身的状态(攻击力和防御力)，当大战`Boss`后攻击力和防御力下降，从备忘录对象恢复到大战前的状态

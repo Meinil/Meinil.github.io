@@ -833,13 +833,13 @@ pip3 install pymysql
 
 创建数据库
 
-```mysql
+```sql
 create databases test charset=utf8;
 ```
 
 配置数据库基本信息
 
-```mysql
+```sql
 class Mysql(object):
     """sqlalchemy的配置信息"""
     # 数据库链接
@@ -852,7 +852,7 @@ class Mysql(object):
 
 导入配置
 
-```mysql
+```sql
 app.config.from_object(Mysql)
 ```
 
