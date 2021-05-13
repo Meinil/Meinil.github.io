@@ -4685,3 +4685,651 @@ Memento --o Caretaker
 游戏角色状态恢复问题
 
 游戏角色有攻击了和防御力，在大战`Boss`前保存自身的状态(攻击力和防御力)，当大战`Boss`后攻击力和防御力下降，从备忘录对象恢复到大战前的状态
+
+```mermaid
+classDiagram
+class Memento {
+    -vit: int
+    -def: int
+}
+class Caretaker {
+	-mermento: Memento
+}
+class GameRole {
+	+createMemento() Memento
+}
+class Client {
+	
+}
+Client ..> Memento
+Client ..> GameRole
+GameRole ..> Memento
+Memento --o Caretaker
+```
+
+### 19.3 具体实现
+
+1. 保存状态的对象`Memento`
+
+   ```java
+   public class Memento {
+       private int vit; // 攻击力
+       private int def; // 防御力
+   
+       public Memento(int vit, int def) {
+           this.vit = vit;
+           this.def = def;
+       }
+   	// getter setter
+   }
+   ```
+
+2. 游戏角色
+
+   ```java
+   public class GameRole {
+       private int vit;
+       private int def;
+   
+       // 创建备忘录
+       public Memento createMemento() {
+           return new Memento(vit, def);
+       }
+   
+       // 恢复备忘录
+       public void recover(Memento memento) {
+           this.vit = memento.getVit();
+           this.def = memento.getDef();
+       }
+   
+       // 显示状态
+       public void display() {
+           System.out.println("攻击力: " + vit);
+           System.out.println("防御力: " + def);
+       }
+   }
+   ```
+
+3. 状态管理
+
+   ```java
+   public class Caretaker {
+       private Memento memento;
+   
+       public Memento getMemento() {
+           return memento;
+       }
+   
+       public void setMemento(Memento memento) {
+           this.memento = memento;
+       }
+   }
+   ```
+
+4. 测试
+
+   ```java
+   public class Client {
+       @Test
+       @DisplayName("备忘录模式")
+       public void test() {
+           GameRole gameRole = new GameRole();
+           gameRole.setVit(100);
+           gameRole.setDef(100);
+           System.out.println("===改变前状态===");
+           gameRole.display();
+           // ===改变前状态===
+           // 攻击力: 100
+           // 防御力: 100
+           
+           // 保存状态
+           Caretaker caretaker = new Caretaker();
+           caretaker.setMemento(gameRole.createMemento());
+   
+           // 修改状态
+           gameRole.setVit(10);
+           gameRole.setDef(10);
+           System.out.println("===改变状态===");
+           gameRole.display();
+   		// ===改变状态===
+           // 攻击力: 10
+           // 防御力: 10
+           
+           
+           // 恢复状态
+           gameRole.recover(caretaker.getMemento());
+           System.out.println("===恢复后的状态===");
+           gameRole.display();
+           // ===恢复后的状态===
+           // 攻击力: 100
+           // 防御力: 100
+       }
+   }
+   ```
+
+### 19.4 注意细节
+
+1. 给用户提供了一种可以恢复状态的机制，可以使用用户能够比较方便地回到某个历史的状态
+2. 如果实现了信息的封装，使得用户不需要关心状态的保存细节
+3. 如果类的成员变量过多，资源会造成比较大的浪费
+4. 备忘录模式可以和原型模式配合使用
+
+## 20. 解释器模式
+
+### 20.1 基本介绍
+
+1. 在编译原理中，一个算术表达式通过词法分析器形成词法单元，而后这些词法单元再通过语法分析器构建语法分析树，最终形成一棵抽象的语法分析树。这里的词法分析器和语法分析器都可以看作是解释器
+
+2. 解释器模式`Interpreter Pattern`：是指给定一个语言，定义它的文法的一种表示，并定义一个解释器，使用该解释器来解释语言中的句子
+
+3. 应用场景
+
+   应用可以将一个需要解释执行的语言中的句子表示为一个抽象语法树
+
+   一些重复出现的问题可以用一种简单的语言来表达
+
+   一个简单语法需要解释
+
+```mermaid
+classDiagram
+class AbstractExpression {
+	<<abstract>>
+	+interpret() void
+}
+class TerminalExpression {
+	
+}
+class NonTerminalExpression {
+	
+}
+class Context {
+	
+}
+class Client {
+	
+}
+Client ..> Context
+Client ..> AbstractExpression
+AbstractExpression <|--o NonTerminalExpression
+AbstractExpression <|-- TerminalExpression
+```
+
+> **上图分析**
+
+1. `Context`是环境角色，含有解释器之外的全局信息
+2. `AbstractExpression`：抽象表达式，声明一个抽象的解释操作，这个方法为抽象语法树中所有的节点所共享
+3. `TerminalExpression`：为终结符表达式，实现与文法中的终结符相关的解释操作
+4. `NonTerminalExpression`：为非终结符表达式，为文法中的非终结符实现解释操作
+
+### 20.2 案例分析
+
+设计一个可以计算加减法的计算器
+
+1. 先输入表达式的形式，比如`a+b+c-d+e`，要求表达式的字母不能重复
+2. 再分别输入`a`、`b`、`c`、`d`、`e`要求表达式的字母不能重复
+3. 最后求出结果
+
+```mermaid
+classDiagram
+class Expression {
+	<<interface>>
+	+interpreter() void
+}
+class VarExpression {
+	
+}
+class SymbolExpression {
+	
+}
+class SubExpression {
+	
+}
+class AddExpression {
+	
+}
+class Calculator {
+	
+}
+class Client {
+	
+}
+Client ..> Calculator
+Calculator o-- Expression
+Expression <|-- VarExpression
+Expression <|--o SymbolExpression
+SymbolExpression<|-- SubExpression
+SymbolExpression<|-- AddExpression
+```
+
+### 20.3 具体实现
+
+1. 抽象类表达式`Expression`
+
+   通过Map键值对可以获取到变量的值
+
+   ```java
+   public interface Expression {
+       int interpreter(Map<String, Integer> var);
+   }
+   ```
+
+2. 变量解释器
+
+   ```java
+   public class VarExpression implements Expression{
+       private final String key;   // key是变量
+   
+       public VarExpression(String key) {
+           this.key = key;
+       }
+   
+       // 根据key返回对应的值
+       @Override
+       public int interpreter(Map<String, Integer> var) {
+           return var.get(key);
+       }
+   }
+   ```
+
+3. 抽象运算符号解析器
+
+   ```java
+   public abstract class SymbolExpression implements Expression{
+       protected Expression left;
+       protected Expression right;
+   
+       public SymbolExpression(Expression left, Expression right) {
+           this.left = left;
+           this.right = right;
+       }
+   
+       @Override
+       public abstract int interpreter(Map<String, Integer> var);
+   }
+   ```
+
+4. 四则运算解释器
+
+   ```java
+   // 加法解释器
+   public class AddExpression extends SymbolExpression{
+   
+       public AddExpression(Expression left, Expression right) {
+           super(left, right);
+       }
+   
+       // 处理相加
+       @Override
+       public int interpreter(Map<String, Integer> var) {
+           return left.interpreter(var) + right.interpreter(var);
+       }
+   }
+   
+   // 减法解释器
+   public class SubExpression extends SymbolExpression{
+   
+       public SubExpression(Expression left, Expression right) {
+           super(left, right);
+       }
+   
+       // 处理相减
+       @Override
+       public int interpreter(Map<String, Integer> var) {
+           return left.interpreter(var) - right.interpreter(var);
+       }
+   }
+   ```
+
+5. 计算器
+
+   ```java
+   public class Calculator {
+       private final Expression expression;
+       public Calculator(String exp) { // exp 要求值的表达式
+           Stack<Expression> stack = new Stack<>();
+           // 表达式拆分为数组
+           char[] chars = exp.toCharArray();
+           // 左右置空
+           Expression left = null;
+           Expression right = null;
+   
+           for (int i = 0; i < chars.length; i++) {
+               switch (chars[i]) {
+                   case '+':
+                       left = stack.pop();
+                       right = new VarExpression(String.valueOf(chars[++i]));
+                       stack.push(new AddExpression(left, right));
+                       break;
+                   case '-':
+                       left = stack.pop();
+                       right = new VarExpression(String.valueOf(chars[++i]));
+                       stack.push(new SubExpression(left, right));
+                       break;
+                   default:
+                       stack.push(new VarExpression(String.valueOf(chars[i])));
+                       break;
+               }
+           }
+           this.expression = stack.pop();
+       }
+   
+       public int run(Map<String, Integer> var) {
+           return this.expression.interpreter(var);
+       }
+   }
+   ```
+
+## 21. 状态模式
+
+### 21.1 基本介绍
+
+状态模式`State Pattern`：它主要用来解决对象在多种状态之间转换时，需要对外输出不同的行为的问题。状态和行为是一一对应的，状态之间和相互转换。当一个对象的内在状态改变时，允许改变其行为，这个对象看起来像是改变了它的类
+
+```mermaid
+classDiagram
+class State {
+	<<interface>>
+	+operation1() void
+	+operation2() void
+}
+class ConcreteState1 {
+	+operation1() void
+	+operation2() void
+}
+class ConcreteState2 {
+	+operation1() void
+	+operation2() void
+}
+class Context {
+	-state: State
+	+getState() State
+	+setState(State state) void
+}
+Context o-- State
+State <|.. ConcreteState1
+State <|.. ConcreteState2
+```
+
+1. `Context`类为环境角色，用于维护`State`实例，这个实例定义为当前状态
+2. `State`是抽象状态角色，定义一个接口封装与`Context`的一个特点接口相关行为
+3. `ConcreteState`具体的状态角色，每个子类实现一个与`Context`的状态相关行为
+
+### 21.2 案例分析
+
+抽奖活动
+
+1. 假如每参加一次这个活动要扣除50积分，中奖概率是10%
+2. 奖品数量固定，抽完不能再抽
+3. 活动有四个状态：可以抽奖、不能抽奖、发放奖品和奖品领完
+
+```mermaid
+classDiagram
+class State {
+	<<interface>>
+	+deduceMoney() void
+	+raffle() boolean
+	+dispensePrize() void
+}
+class NoRaffleState {
+	+deduceMoney() void
+	+raffle() boolean
+	+dispensePrize() void
+}
+class CanRaffleState {
+	+deduceMoney() void
+	+raffle() boolean
+	+dispensePrize() void
+}
+class DispenseState {
+	+deduceMoney() void
+	+raffle() boolean
+	+dispensePrize() void
+}
+class DispenseOutState {
+	<<interface>>
+	+deduceMoney() void
+	+raffle() boolean
+	+dispensePrize() void
+}
+class Activity {
+	-state: State
+    -count: int
+    -noRaffleState: State
+    -State: canRaffleState
+    -dispenseState: State
+    -dispenseOutState: State
+    +Activity(int count) void
+    +deductMoney() void
+    +raffle() void
+}
+State <|.. NoRaffleState
+State <|.. CanRaffleState
+State <|.. DispenseState
+State <|.. DispenseOutState
+
+NoRaffleState -- Activity
+CanRaffleState -- Activity
+DispenseState -- Activity
+DispenseOutState -- Activity
+```
+
+### 21.3 具体实现
+
+1. 状态接口
+
+   ```java
+   public interface State {
+       void deductMoney();
+       boolean raffle();
+       void dispensePrize();
+   }
+   ```
+
+2. 各种具体的状态
+
+   能抽奖的状态
+
+   ```java
+   public class CanRaffleState implements State{
+       private Activity activity;
+   
+       public CanRaffleState(Activity activity) {
+           this.activity = activity;
+       }
+   
+       // 扣除积分不能再扣
+       @Override
+       public void deductMoney() {
+           System.out.println("已经扣取过积分了");
+       }
+   
+       // 抽奖改变状态
+       @Override
+       public boolean raffle() {
+           System.out.println("正在抽奖，请稍等");
+           int num = new Random().nextInt(10);
+           if (num == 0) {
+               // 中奖发放奖品
+               activity.setState(activity.getDispenseState());
+               return true;
+           }
+   
+           System.out.println("很遗憾没有抽中奖品");
+           activity.setState(activity.getNoRaffleState());
+           return false;
+       }
+   
+       @Override
+       public void dispensePrize() {
+           System.out.println("没有中奖，不能发放奖品");
+       }
+   }
+   ```
+
+   发奖品的状态
+
+   ```java
+   public class DispenseState implements State{
+       private Activity activity;
+   
+       public DispenseState(Activity activity) {
+           this.activity = activity;
+       }
+   
+       @Override
+       public void deductMoney() {
+           System.out.println("不能扣除积分");
+       }
+   
+       @Override
+       public boolean raffle() {
+           System.out.println("不能抽奖");
+           return false;
+       }
+   
+       @Override
+       public void dispensePrize() {
+           if(activity.getCount() > 0) {
+               System.out.println("中奖了");
+               activity.setState(activity.getNoRaffleState());
+           } else {
+               System.out.println("很遗憾，奖品发送完了");
+               activity.setState(activity.getDispenseState());
+           }
+       }
+   }
+   ```
+
+   奖品发送完毕状态
+
+   ```java
+   public class DispenseOutState implements State{
+       private Activity activity;
+   
+       public DispenseOutState(Activity activity) {
+           this.activity = activity;
+       }
+   
+       @Override
+       public void deductMoney() {
+           System.out.println("奖品发送完了，请下次再参加");
+       }
+   
+       @Override
+       public boolean raffle() {
+           System.out.println("奖品发送完了，请下次再参加");
+           return false;
+       }
+   
+       @Override
+       public void dispensePrize() {
+           System.out.println("奖品发送完了，请下次再参加");
+       }
+   }
+   ```
+
+   不能抽奖的状态
+
+   ```java
+   public class NoRaffleState implements State{
+       private final Activity activity;
+   
+       public NoRaffleState(Activity activity) {
+           this.activity = activity;
+       }
+   
+       // 可以扣积分,并设置为可以抽奖的状态
+       @Override
+       public void deductMoney() {
+           System.out.println("扣除50积分，可以抽奖");
+           activity.setState(activity.getCanRaffleState());
+       }
+   
+       // 当前状态不能抽奖
+       @Override
+       public boolean raffle() {
+           System.out.println("支付积分之后才能抽奖");
+           return false;
+       }
+   
+       // 当前状态不能发放奖品
+       @Override
+       public void dispensePrize() {
+           System.out.println("不能发放奖品");
+       }
+   }
+   ```
+
+3. 状态管理
+
+   ```java
+   public class Activity {
+       private State state;            // 当前状态
+       private int count = 0;          // 奖品数量
+   
+       // 四种状态
+       private State noRaffleState = new NoRaffleState(this);
+       private State canRaffleState = new CanRaffleState(this);
+       private State dispenseState = new DispenseState(this);
+       private State dispenseOutState = new DispenseOutState(this);
+   
+       public Activity(int count) {
+           this.state = getNoRaffleState();
+           this.count = count;
+       }
+   
+       // 扣除积分
+       public void deductMoney() {
+           state.deductMoney();
+       }
+   
+       // 抽奖
+       public void raffle() {
+           // 抽奖成功，领奖
+           if (state.raffle()) {
+               state.dispensePrize();
+           }
+       }
+   
+       // 这里请大家注意，每领取一次奖品，count--
+       public int getCount() {
+           return count--;
+       }
+       // getter setter
+   }
+   ```
+
+4. 测试
+
+   ```java
+   public class Client {
+       @Test
+       @DisplayName("状态模式")
+       public void test() {
+           Activity activity = new Activity(1);
+           for (int i = 0; i < 5; i++) {
+               System.out.println("===="+ (i + 1) + "====");
+               // 参加抽奖，第一步点击扣除积分
+               activity.deductMoney();
+   
+               // 第二步抽奖
+               activity.raffle();
+           }
+       }
+   }
+   ```
+
+### 21.4 注意事项
+
+1. 代码有很强的可读性和可维护性。状态模式将每个状态的行为封装到对应的一个类中
+2. 但会产生很多类。每个状态都要对应一个类，当状态过多时会产生很多类，加大维护难度
+3. 当一个事件或者对象有很多种状态，状态之间会相互转换，对不同的状态要求有不同的行为时，可以考虑使用状态模式
+
+## 22. 策略模式
+
+### 22.2 案例分析
+
+鸭子项目
+
+有各种鸭子(比如野鸭、北京鸭、水鸭等)，鸭子有各种行为，比如叫、飞行等，需求：显示鸭子的信息
+
