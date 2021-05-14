@@ -5327,9 +5327,443 @@ DispenseOutState -- Activity
 
 ## 22. 策略模式
 
+### 22.1 基本介绍
+
+策略模式`Strategy Pattern`中，定义算法族，分别封装起来，让他们之间可以互相替代，此模式让算法的变化独立于使用算法的客户
+
+```mermaid
+classDiagram
+class Strategy1 {
+	<<interface>>
+	+operation1() void
+	+operation2() void
+}
+class ConcreteStrategy1 {
+	+operation1() void
+	+operation2() void
+}
+class ConcreteStrategy2 {
+	+operation1() void
+	+operation2() void
+}
+class Strategy2 {
+	<<interface>>
+	+operation1() void
+	+operation2() void
+}
+class ConcreteStrategy3 {
+	+operation1() void
+	+operation2() void
+}
+class ConcreteStrategy4 {
+	+operation1() void
+	+operation2() void
+}
+class Context {
+	-strategy1: Strategy1
+	-strategy2: Strategy2
+}
+Strategy1 <|.. ConcreteStrategy1
+Strategy1 <|.. ConcreteStrategy2
+Strategy2 <|.. ConcreteStrategy3
+Strategy2 <|.. ConcreteStrategy4
+Context o-- Strategy1
+Context o-- Strategy2
+```
+
+`Context`拥有其他的策略接口，使用的那个接口可以通过构造器指定
+
 ### 22.2 案例分析
 
 鸭子项目
 
 有各种鸭子(比如野鸭、北京鸭、水鸭等)，鸭子有各种行为，比如叫、飞行等，需求：显示鸭子的信息
+
+```mermaid
+classDiagram
+class FlyBehavior {
+	<<interface>>
+	+fly() void
+}
+class NoFlyBehavior {
+	+fly() void
+}
+class GoodFlyBehavior {
+	+fly() void	
+}
+class BadFlyBehavior {
+	+fly() void	
+}
+class QuackBehavior {
+	<<interface>>
+	+quack() void
+}
+class GeGeQuackBehavior {
+	+quack() void
+}
+class NoQuackBehavior {
+	+quack() void
+}
+class GaGaQuackBehavior {
+	+quack() void
+}
+class Duck {
+	#flyBehavior: FlyBehavior
+	#quackBehavior: QuackBehavior
+}
+class PekingDuck {
+	
+}
+class WildDuck {
+	
+}
+class ToyDuck {
+	
+}
+FlyBehavior <|.. NoFlyBehavior
+FlyBehavior <|.. GoodFlyBehavior
+FlyBehavior <|.. BadFlyBehavior
+FlyBehavior --o Duck
+Duck <|-- PekingDuck
+Duck <|-- WildDuck
+Duck <|-- ToyDuck
+QuackBehavior --o Duck
+QuackBehavior <|.. GeGeQuackBehavior
+QuackBehavior <|.. NoQuackBehavior
+QuackBehavior <|.. GaGaQuackBehavior
+```
+
+### 22.3 具体实现
+
+1. 行为接口
+
+   ```java
+   public interface FlyBehavior {
+       void fly();
+   }
+   ```
+
+2. 具体行为实现类
+
+   ```java
+   public class GoodFlyBehavior implements FlyBehavior{
+       @Override
+       public void fly() {
+           System.out.println("飞行技术高超");
+       }
+   }
+   
+   public class BadFlyBehavior implements FlyBehavior{
+       @Override
+       public void fly() {
+           System.out.println("飞行技术不行");
+       }
+   }
+   
+   public class NoFlyBehavior implements FlyBehavior{
+       @Override
+       public void fly() {
+           System.out.println("不会飞行");
+       }
+   }
+   ```
+
+3. 鸭子抽象类
+
+   ```java
+   public abstract class Duck {
+       protected FlyBehavior flyBehavior;
+   
+       public abstract void display(); // 显示鸭子信息
+   
+       public void fly() {
+           if (flyBehavior != null) {
+               flyBehavior.fly();
+           }
+       }
+   }
+   ```
+
+4. 鸭子具体实现类
+
+   ```java
+   public class WildDuck extends Duck{
+       public WildDuck() {
+           flyBehavior = new GoodFlyBehavior();
+       }
+   
+       @Override
+       public void display() {
+           System.out.println("这是野鸭");
+       }
+   }
+   
+   public class ToyDuck extends Duck{
+       public ToyDuck() {
+           flyBehavior = new NoFlyBehavior();
+       }
+   
+       @Override
+       public void display() {
+           System.out.println("玩具鸭");
+       }
+   }
+   
+   public class PekingDuck extends Duck{
+       public PekingDuck() {
+           flyBehavior = new NoFlyBehavior();
+       }
+   
+       @Override
+       public void display() {
+           System.out.println("北京鸭不能飞行");
+       }
+   }
+   ```
+
+5. 测试
+
+   ```java
+   public class Client {
+       @Test
+       @DisplayName("策略模式")
+       public void test() {
+           WildDuck wildDuck = new WildDuck();
+           wildDuck.fly(); // 飞行技术高超
+   
+           ToyDuck toyDuck = new ToyDuck();
+           toyDuck.fly(); // 不会飞行
+           
+       }
+   }
+   ```
+
+### 22.4 注意事项
+
+1. 策略模式的关键是：分析项目中变化部分与不变的部分
+2. 策略模式的核心思想：多用组合/聚合，少用继承。用行为类组合，而不是行为的继承
+3. 没添加一个策略时就要增加一个类，当策略过多时会导致类数目庞大
+
+## 23. 职责链模式
+
+### 23.1 基本介绍
+
+1. 职责链模式`Chain of Responsibility Pattern`，又叫责任链模式，为请求创建了一个接受者对象的链。这种模式对请求的发送者和接受者进行解藕
+2. 职责链模式通常每个接受者都包含另一个接受者的引用。人哭过一个对象不能处理该请求，那么它会把相同的请求传给下一个接受者，依此类推，属于行为型模式
+
+```mermaid
+classDiagram
+class Client {
+	
+}
+class Request {
+	
+}
+class Handler {
+	<<abstract>>
+	-successor: Handler
+	+processRequest() void
+}
+class ConcreteHandler1 {
+	+processRequest() void
+}
+class ConcreteHandler2 {
+	+processRequest() void
+}
+Request <.. Handler
+Request <.. Client
+Client ..> Handler
+Handler o-- Handler
+Handler <|-- ConcreteHandler1
+Handler <|-- ConcreteHandler2
+```
+
+> **上图说明**
+
+1. `Handler`：抽象的处理者，定义了一个出来请求的接口，同时含有另外的`Handler`
+2. `ConcreteHandler1`和`ConcreteHandler2`负责处理具体的请求，处理它负责的请求，可以访问它的后继者(下一个处理者)，如果可以处理当前请求，则处理，否则就将请求交给后继者去处理，从而形成一个职责链
+3. `Request`：一般表示为一个待处理的请求
+
+### 23.2 案例分析
+
+学校`OA`系统的采购审批项目
+
+1. 采购员采购教学器材
+2. 如果金额小于等于5000，由教学主任审批
+3. 如果金额小于等于10000，由院长审批
+4. 如果金额小于等于30000，由副校长审批
+5. 如果金额超过30000以上，由校长审批
+
+```mermaid
+classDiagram
+class Client {
+	
+}
+class PurchaseRequest {
+	
+}
+class Approver {
+	<<abstract>>
+	-approver: Approver
+	+processRequest() void
+}
+class DepartmentApprover {
+	+processRequest() void
+}
+class CollegeApprover {
+	+processRequest() void
+}
+class ViceSchoolMasterApprover {
+	+processRequest() void	
+}
+class SchoolMasterApprover {
+	+processRequest() void
+}
+Client ..> Approver
+Client ..> PurchaseRequest
+PurchaseRequest <.. Approver
+Approver <|-- DepartmentApprover
+Approver <|--CollegeApprover
+Approver <|-- ViceSchoolMasterApprover
+Approver <|-- SchoolMasterApprover
+Approver o-- Approver
+```
+
+### 23.3 具体实现
+
+1. 请求类
+
+   ```java
+   public class PurchaseRequest {
+       private int type; // 请求类型
+       private double price;
+       private int id;
+   
+       public PurchaseRequest(int type, double price, int id) {
+           this.type = type;
+           this.price = price;
+           this.id = id;
+       }
+   
+   	// getter
+   }
+   ```
+
+2. 抽象处理器
+
+   ```java
+   public abstract class Approver {
+       private Approver approver; // 下一个处理者
+       private String name;        // 名字
+   
+       public Approver(String name) {
+           this.name = name;
+       }
+   
+       public void setApprover(Approver approver) {
+           this.approver = approver;
+       }
+   
+       // 处理请求的方法
+       public abstract void processRequest(PurchaseRequest request);
+   }
+   ```
+
+3. 具体的处理器
+
+   ```java
+   public class DepartmentApprover extends Approver{
+       public DepartmentApprover(String name) {
+           super(name);
+       }
+   
+       @Override
+       public void processRequest(PurchaseRequest request) {
+           if(request.getPrice() <= 5000) {
+               System.out.println("请求编号: " + request.getId() + " 被" + this.name + "处理");
+               return;
+           }
+           approver.processRequest(request);
+       }
+   }
+   
+   public class CollegeApprover extends Approver{
+       public CollegeApprover(String name) {
+           super(name);
+       }
+   
+       @Override
+       public void processRequest(PurchaseRequest request) {
+           if(request.getPrice() > 5000 && request.getPrice() <= 10000) {
+               System.out.println("请求编号: " + request.getId() + " 被" + this.name + "处理");
+               return;
+           }
+           approver.processRequest(request);
+       }
+   }
+   
+   public class ViceSchoolMasterApprover extends Approver{
+       public ViceSchoolMasterApprover(String name) {
+           super(name);
+       }
+   
+       @Override
+       public void processRequest(PurchaseRequest request) {
+           if(request.getPrice() > 10000 && request.getPrice() <= 30000) {
+               System.out.println("请求编号: " + request.getId() + " 被" + this.name + "处理");
+               return;
+           }
+           approver.processRequest(request);
+       }
+   }
+   
+   public class SchoolMasterApprover extends Approver{
+       public SchoolMasterApprover(String name) {
+           super(name);
+       }
+   
+       @Override
+       public void processRequest(PurchaseRequest request) {
+           if(request.getPrice() > 30000) {
+               System.out.println("请求编号: " + request.getId() + " 被" + this.name + "处理");
+               return;
+           }
+           approver.processRequest(request);
+       }
+   }
+   ```
+
+4. 测试
+
+   ```java
+   public class Client {
+       @Test
+       @DisplayName("责任链模式")
+       public void test() {
+           // 创建一个请求
+           PurchaseRequest request = new PurchaseRequest(1, 31000, 1);
+   
+           // 创建相关的审批人
+           DepartmentApprover department = new DepartmentApprover("张主任");
+           CollegeApprover college = new CollegeApprover("李院长");
+           ViceSchoolMasterApprover viceSchool = new ViceSchoolMasterApprover("王副校长");
+           SchoolMasterApprover school = new SchoolMasterApprover("丁校长");
+   
+           // 设置下一个处理人(构成环形)
+           department.setApprover(college);
+           college.setApprover(viceSchool);
+           college.setApprover(school);
+           school.setApprover(department);
+   
+           department.processRequest(request); // 请求编号: 1 被丁校长处理
+       }
+   }
+   ```
+
+### 23.4 注意事项
+
+1. 将请求和处理分开，实现解藕，提高系统的灵活性
+2. 简化了对象，使对象不需要知道链的结构
+3. 性能会受到影响，特别是在链比较长的时候，因此需控制链中的最大节点数量，一般通过在`Handler`中设置一个最大节点数量，在`setNext()`方法中判断是否已经超过阈值，超过则不允许该链建立
+4. 调试不方便。采用类似递归的方式，调试时逻辑比较复杂
 
