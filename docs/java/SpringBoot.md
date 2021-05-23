@@ -1784,9 +1784,10 @@ public class MyRegisterConfig {
    ```yaml
    spring:
        datasource:
-           url: 
-           username: 
-           password: 
+           driver-class-name: com.mysql.cj.jdbc.Driver
+           url: jdbc:mysql://localhost:3306/test?useSSL=true&useUnicode=true&characterEncoding=UTF-8&serverTimezone=Asia/Shanghai
+           username: root
+           password: 123456
    ```
 
    `SpringBoot`默认已经配置了一个`JdbcTemplate`对象用于操纵数据库并且可以通过`spring.jdbc`来修改其属性

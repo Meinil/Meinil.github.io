@@ -667,7 +667,6 @@ class Number implements Runnable{
       System.out.println(str1 == str2); // false
   }
   ```
-  
 
 **String对象的创建**
 
@@ -4535,10 +4534,10 @@ public static void main(String[] args) {
 - 反射的相关`API`
 
   ```java
-  java.lang.Class; // 代表一个类
-  java.lang.reflect.Method; // 代表类的方法
-  java.lang.reflect.Field; // 代表类的成员变量
-  java.lang.reflect.Constructor; // 代表类的构造器
+  java.lang.Class; 				// 代表一个类
+  java.lang.reflect.Method; 		// 代表类的方法
+  java.lang.reflect.Field; 		// 代表类的成员变量
+  java.lang.reflect.Constructor; 	// 代表类的构造器
   ```
 
 #### 8.1.1 快速入门
@@ -4613,7 +4612,7 @@ class Person{
 
 #### 8.1.2 Class类
 
-`Class`类的实例对应着一个运行时类
+`Class`类的实例对应着一个运行时类，一个类的`Class`类只会加载一次
 
 **获取`Class`实例的方式**
 
@@ -4667,8 +4666,8 @@ class Person{
 
 ```java
 Class<Person> clazz = Person.class;
-Person p = clazz.newInstance(); // 方法已过时，推荐clazz.getConstructor().newInstance();
-System.out.println(p); // Person{name='null', age=0}
+Person p = clazz.getConstructor().newInstance(); 	// 方法已过时，推荐
+System.out.println(p); 								// Person{name='null', age=0}
 ```
 
 提供创建多个类实例的方法
@@ -4825,7 +4824,6 @@ public @interface MyAnnotation {
   ```
 
 - 对于每个属性也可以获得以下结构
-  
 ```java
   Class<Person> clazz = Person.class;
   Field[] fields = clazz.getDeclaredFields();
