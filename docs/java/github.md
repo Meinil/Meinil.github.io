@@ -189,11 +189,11 @@ public class AuthorizeController {
 
 1. 点击上面编写的好的页面
 
-![image-20210505215529449](C:\Users\47106\AppData\Roaming\Typora\typora-user-images\image-20210505215529449.png)
+![](https://gitee.com/dingwanli/picture/raw/master/20210523183203.png)
 
 2. 填写好账号之后就可以点击`sign in`进行登陆
 
-   <img src="C:\Users\47106\AppData\Roaming\Typora\typora-user-images\image-20210505215713601.png" alt="image-20210505215713601" style="zoom:80%;" />
+   <img src="https://gitee.com/dingwanli/picture/raw/master/20210523183233.png" style="zoom:80%;" />
 
 登陆能够获取的信息有很多，可以按需封装进`user`使用
 
