@@ -608,6 +608,12 @@ public class DruidTest {
     <artifactId>commons-dbutils</artifactId>
     <version>1.7</version>
 </dependency>
+<dependency>
+    <groupId>org.projectlombok</groupId>
+    <artifactId>lombok</artifactId>
+    <version>1.18.20</version>
+    <scope>provided</scope>
+</dependency>
 ```
 
 ### 7.1 常用类
@@ -633,3 +639,89 @@ public class DruidTest {
    `MapHandler`：将结果集中的每一行数据封装到一个`Map`里，`key`是列名，`value`就是对应的值
    
    `MapListHandler`：将结果集中的每一行都封装到一个`Map`里，然后在存放到`List`中
+   
+   `ScalarHandler`：返回单行单列的数据(返回一个Object)
+
+### 7.2 环境搭建
+
+1. 编写实体类
+
+   ```sql
+   @Data
+   public class Actor {
+       private int id;
+       private String name;
+       private String sex;
+       private Timestamp borndate;
+       private String phone;
+   }
+   ```
+
+2. 使用`Druid`数据源
+
+   ```java
+   public class DBUtils {
+       private static DataSource dataSource;
+       static {
+           // 1. 创建Properties
+           Properties properties = new Properties();
+           try {
+               properties.load(new FileInputStream(DruidTest.class.getResource("/").getFile() + "druid.properties"));
+               // 2. 创建数据源
+               dataSource = DruidDataSourceFactory.createDataSource(properties);
+           } catch (Exception e) {
+               e.printStackTrace();
+           }
+       }
+   }
+   ```
+
+### 7.3 快速入门
+
+> **查询**
+
+```java
+public static void main(String ...args) throws Exception{
+    // 1. 获取连接
+    Connection connection = dataSource.getConnection();
+
+    // 2. 创建QueryRunner
+    QueryRunner queryRunner = new QueryRunner();
+
+    // 3. 执行SQL
+    List<Actor> list = queryRunner.query(
+        connection,
+        "SELECT * FROM actor WHERE id > ?",
+        new BeanListHandler<>(Actor.class), 1);
+
+    System.out.println(list);
+
+    connection.close();
+}
+```
+
+`DBUtils`的底层会自动关闭结果集和预处理对象
+
+> **更新、删除、插入**
+
+```java
+public static void main(String ...args) throws Exception{
+    // 1. 获取连接
+    Connection connection = dataSource.getConnection();
+
+    // 2. 创建QueryRunner
+    QueryRunner queryRunner = new QueryRunner();
+
+    // 3. 执行SQL
+    int rows = queryRunner.update(
+        connection,
+        "UPDATE actor SET name = ? WHERE id = ?",
+        "彭于晏", 1);
+
+    System.out.println(rows);
+
+    connection.close();
+}
+```
+
+`update`方法可以用来执行更新、插入和删除语句，并返回受影响的行数
