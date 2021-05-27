@@ -8,10 +8,6 @@ tags:
  - java
 ---
 
-# JVM
-
-[TOC]
-
 ## 1. JVM与java体系
 
 `JVM`是一个跨语言的平台，在`java7`的发布之后，`java`虚拟机的设计者们通过`JSR-292`规范基本实现在`java`虚拟机上运行非`java`语言编写的程序
@@ -351,7 +347,7 @@ URLClassLoader <|-- AppClassLoader
 
 #### 2.3.1 工作原理
 
-<img src="https://gitee.com/dingwanli/picture/raw/master/20210526140758.png" style="zoom:80%;" />
+<img src="https://gitee.com/dingwanli/picture/raw/master/20210527215556.png" style="zoom:60%;" />
 
 1. 如果一个类加载器收到了类加载请求，它并不会自己先去加载，而是把这个请求委托给父类的加载器去执行
 2. 如果父类加载器还存在其父类加载器，则进一步向上委托，依次递归，请求最终到达顶层的启动类加载器
@@ -557,6 +553,9 @@ public class Main {
 2. 操作数栈`Operand Stack`(表达式栈)
 3. 动态链接`Dynamic Linking`(或指向运行时常量池的方法引用)
 4. 方法返回地址`Return Address`(或方法正常退出或者异常退出的定义)
+5. 一些附加信息`可选`
+
+<img src="https://gitee.com/dingwanli/picture/raw/master/20210527125045.png" style="zoom:60%;" />
 
 #### 4.3.1 局部变量表
 
@@ -564,3 +563,362 @@ public class Main {
 2. 定义为一个数字数组，主要用于存储方法参数和定义在方法体内的局部变量，这些数据类型、对象引用`reference`，以及`returnAddress`类型
 3. 由于局部变量表是建立在线程的栈上，是线程的私有数据，因此不存在数据安全问题
 4. 局部变量表所需的容量大小是编译期确定下来的，并保存在方法的`Code`属性的`maximum local variables`数据项中。在方法运行期间是不会改变局部变量表的大小的
+
+> **slot**
+
+**简介**
+
+1. 参数值的存放总是在局部变量数组的`index0`开始，到数组长度`-1`的索引结束
+
+2. 局部变量表，最基本的存储单元是`slot`
+
+3. 局部变量表种存放编译期可知的各种基本数据类型，引用类型`reference`，`returnAddress`类型的变量
+
+4. 在局部变量表里，32位以内的类型只占一个`slot`(包括`returnAddress`类型)，64位的类型(long和double)占用两个`slot`。
+
+   `byte`、`short`、`char`在存储前被转换为`int`、`boolean`也被转换为`int`，0表示`false`，非零表示`true`
+
+   `long`和`double`则占据两个`slot`
+
+**理解**
+
+1. `JVM`会为局部变量表中的每一个`slot`都分配一个访问索引，通过这个索引即可成功访问到局部变量表中指定的局部变量值
+2. 当一个实例方法被调用的时候，它的方法参数和方法体内部定义的局部变量将会按照顺序被复制到局部变量表中的每一个`slot`上
+3. 如果需要访问局部变量表中一个`64bit`的局部变量值时，只需要使用前一个索引即可
+4. 如果当前帧是由构造方法或者实例方法创建的，那么该对象引用`this`会存放在`index`为`0`的`slot`处，其余的参数按照参数表顺序继续排列
+
+```java
+public class StackTest {
+    public static void main(String[] args) {
+        new StackTest().test(new Date(), "测试");
+    }
+
+    public void test(Date data, String name) {
+        int a = 10;
+        double b = 20.0;
+        char c = 'c';
+    }
+}
+```
+
+查看`test`方法的局部变量表
+
+<img src="https://gitee.com/dingwanli/picture/raw/master/20210527094023.png" style="zoom:80%;" />
+
+**注意**：栈帧中的局部变量表中的槽位是可以重用的，如果一个局部变量过了其作用域，那么在其作用域之后申明的新的局部变量就很有可能会复用过期的局部变量的槽位，从而达到节省资源的目的
+
+> **注意**
+
+在栈帧中，与性能调优关系最为密切的部分就是前面提到的局部变量表。在方法执行时，虚拟机使用局部变量表完成方法的传递
+
+局部变量表中的变量也是重要的垃圾回收根节点，只要被局部变量表中直接或间接引用的对象都不会被回收
+
+#### 4.3.2 操作数栈
+
+> **基本介绍**
+
+1. 每一个独立的栈帧中除了包含局部变量表以外，还包含一个后进先出的操作数栈买也可以称为表达式栈`Expression Stack`
+
+2. 操作数栈，在方法执行过程中，根据字节码指，往栈中国年写入数据或提取数据，即入栈`push`出栈`pop`
+
+   某些字节码指令将值压入操作数栈，其余的字节码指令将操作数取出栈。使用它们后再把结果压入栈
+
+   比如：执行复制、交换、求和等操作
+
+3. 操作数栈，主要用于保存计算过程的中间结果，同时作为计算机过程中变量临时的存储空间
+
+4. 操作数栈就是`JVM`执行引擎的一个工作区，当一个方法刚开始执行的时候，一个新的栈帧也会随之被创建出来，这个方法的操作数栈是空的
+
+5. 每一个操作数栈都会拥有一个明确的栈深度用于存储数值，其所需的最大深度在编译期就定义好了，保存在方法的`Code`属性中，为`max_stack`的值
+
+6. 栈中的任何一个元素都是可以任意的`Java`数据类型
+
+   `32bit`的类型占用一个栈单位深度
+
+   `64bit`的类型占用两个栈单位深度
+
+7. 操作数栈并非采用访问索引的方式来进行数据访问的，而是只能通过标准的入栈`push`和出栈`pop`来完成一次数据访问
+
+8. 如果被调用的方法带有返回值的话，其返回值将会被压入当前栈帧的操作数栈中，并更新`PC`寄存器中下一条需要执行的字节码指令
+
+9. 操作数栈中元素的数据类型必须与字节码指令的序列严格匹配，这由编译器在编译器期间进行验证，同时在类加载过程中的类检验阶段的数据流分析阶段再次验证
+
+10. `Java`虚拟机的解释引擎是基于栈的执行引擎，其中的栈指的就是**操作数栈**
+
+> **案例演示**
+
+```java
+public class OperationTest {
+    public void test() {
+        int a = 0;
+        int b = 1;
+        int k = a + b;
+    }
+}
+```
+
+字节码
+
+```class
+0 iconst_0
+1 istore_1
+2 iconst_1
+3 istore_2
+4 iload_1
+5 iload_2
+6 iadd
+7 istore_3
+8 return
+```
+
+#### 4.3.3 栈顶缓存
+
+由于操作数是存储在内存中的，因此频繁地执行内存读/写操作必然会影响执行速度。为了解决这个问题，`HotSpot JVM`的设计者们提出了栈顶缓存`Top-of-Stack Cashing`技术，将栈顶元素全部缓存在物理`CPU`的寄存器中，以此降低对内存的读/写次数，提升执行引擎的执行效率
+
+#### 4.3.4 动态链接
+
+1. 每一个栈帧内部都包含一个**指向运行时常量池中该帧所属方法的引用**。包含这个引用的目的就是为了当前方法的代码能够实现动态链接`Dynamic Linking`。比如：`invokedynamic`指令
+
+2. 在`Java`源文件被编译到字节码文件中时，所有的变量和方法引用都作为符号引用`Symbolic Reference`保存在`class`文件的常量池里。比如：描述一个方法调用了另外的其他方法时，就是通过常量池中指向方法的符号引用来表示的，那么动态链接的作用就是为了将这些符号引用转换为调用方法的直接引用
+
+3. 为什么需要常量池？
+
+   常量池的作用，就是为了提供一些符号和常量，便于指令的识别
+
+#### 4.3.5 方法调用
+
+在`JVM`中，将符号引用转换为调用方法的直接引用与方法的绑定机制相关
+
+> **链接方式**
+
+**静态链接**：当一个字节码文件被装载进`JVM`内部时，如果被调用的目标方法在编译期可知，且运行期保持不变时。这种情况下将调用方法的符号引用转换为直接引用的过程称之为静态链接
+
+**动态链接**：如果被调用的方法在编译期无法确定下来，也就是说，只能能够程序运行期将调用方法的符号引用转换为直接引用，由于这种引用转换过程具备动态性，因此也就称之为动态链接
+
+> **绑定机制**
+
+对应的方法绑定机制：早期绑定和晚期绑定。绑定是一个字段、方法或者类在符号引用被替换为直接引用的过程，这仅仅发生一次
+
+**早期绑定**：指被调用的目标方法如果在编译期可知，且运行期保持不变时，即可将这个方法与所属的类型进行绑定，这样一来，由于明确了被调用的目标方法究竟是哪一个，因此也就可以使用静态链接的方式将符号引用替换为直接引用
+
+**晚期绑定**：如果被调用的方法在编译期无法被确定下来，只能够在程序运行期根据实际的类型绑定相关的方法，珍重绑定方式就称为晚期绑定
+
+```java
+public class HuntableTest {
+    public void test(Huntable huntable) {
+        huntable.hunt(); // 晚期绑定
+    }
+}
+
+
+class Dog implements Huntable {
+    @Override
+    public void hunt() {
+        System.out.println("狗吃骨头");
+    }
+}
+class Cat implements Huntable {
+
+    @Override
+    public void hunt() {
+        System.out.println("猫吃鱼");
+    }
+}
+
+
+interface Huntable{
+    void hunt();
+}
+```
+
+> **虚方法与非虚方法**
+
+**非虚方法**：如果方法在编译期就确定了具体的调用版本，这个版本在运行时是不可变的。这样的方法被称为非虚方法
+
+静态方法、私有方法、`final`方法、实例构造器、父类方法都是非虚方法
+
+> **方法调用指令**
+
+虚拟机中提供了以下几条方法调用指令
+
+1. 普通调用指令
+
+   ```
+   invokestatic	# 调用静态方法，解析阶段确定唯一方法版本
+   invokespecial	# 调用<init>方法、私有及父类方法，解析阶段确定唯一方法版本
+   invokeVirtual	# 调用所有虚方法
+   invokeinterface # 调用接口方法
+   ```
+
+2. 动态调用指令
+
+   ```
+   invokedynamic	# 动态解析出需要调用的方法，然后执行
+   ```
+
+   前四条指令固化在虚拟机内部，方法的调用执行不可人为干涉，而`invokedynamic`指令则支持由用户确定方法版本。其中`invokestatic`指令和`invokespecial`指令调用的方法称为非虚方法，其余的(`final`修饰的除外)称为虚方法
+
+   `invokedynamic`指令是`Java7`中出现的指令，这是`Java`为了实现动态类型语言支持而做的一种改进。但是`Java7`中并没有提供直接生成`invokeddynamic`指令的方法，需要借助`ASM`这种底层字节码工具来产生`invokeddynamic`指令。直到`Java8`的`Lambda`表达式的出现，`invokedymic`指令的生成，在`Java`中才有了直接的生成方式
+
+示例
+
+```java
+public class Father {
+    public Father() {
+        System.out.println("father的构造器");
+    }
+
+    public static void staticTest(String str) {
+        System.out.println("father " + str);
+    }
+
+    public final void finalTest() {
+        System.out.println("father final方法");
+    }
+
+    public void generalTest() {
+        System.out.println("father 普通方法");
+    }
+}
+
+class Son extends Father{
+    public Son() {
+        super(); // invokespecial
+    }
+
+    // 不是重写的静态方法,因为静态方法不能被重写
+    public static void staticTest(String str) {
+        System.out.println("son " + str);
+    }
+
+    private void privateTest() {
+        System.out.println("son 私有方法");
+    }
+
+    public void show() {
+        // invokestatic
+        staticTest("good");
+        // invokestatic
+        super.staticTest("hello");
+        // invokevirtual
+        privateTest();
+        // invokespecial
+        super.generalTest();
+        // invokevirtual
+        finalTest();
+        // invokevirtual
+        generalTest();
+    }
+
+    public void generalTest() {
+        System.out.println("son 普通方法");
+    }
+}
+```
+
+> **方法重写的本质**
+
+1. 找到操作数栈顶的第一个元素所执行的对象的实际类型，记作`C`
+2. 如果类型`C`中找到与常量中的描述符合简单名称都相符的方法，则进行访问权限校验，如果通过则返回这个方法的直接引用，查找过程结束；如果不通过则返回`java.lang.IllegalAccessError`异常
+3. 否则按照继承关系从下往上依次对`C`的各个父类进行第2步的搜索和验证过程
+4. 如果始终没有找到合适的方法，则抛出`java.lang.AbstractMethodError`异常
+
+> **虚方法表**
+
+1. 在面向对象的编程中，会很频繁的使用到动态分配，如果每次动态分配的过程中都要重新在类的方法元数据中搜索合适的目标的话可能影响到执行效率。因此，为了提高性能，`JVM`采用在类的方法区建立一个虚方法表`virtual method table`(非虚方法不会出现在表中)来实现，使用索引表来代替查找
+2. 每个类中都有一个虚方法表，表中存放着各个方法的实际入口
+3. 创建时机：虚方法表会在类加载的链接阶段被创建并开始初始化，类的变量初始值准备完成之后，`JVM`会把该类的方法表也初始化完毕
+
+<img src="https://gitee.com/dingwanli/picture/raw/master/20210527201731.png" style="zoom:60%;" />
+
+#### 4.3.6 方法返回地址
+
+方法返回地址、动态链接地址和一些附加信息又被称为**栈数据区**
+
+1. 存放调用该方法的`PC`寄存器的值
+
+2. 一个方法的结束，有两种方式
+
+   正常执行完成
+
+   出现未处理的异常，非正常退出
+
+3. 无论通过哪种方式退出，在方法退出后都返回到该方法被调用的位置。方法正常退出时，调用者的`PC`计数器的值作为返回地址，即调用该方法的指令的下一条指令的地址。而通过异常退出的，返回地址是要通过异常表来确定，栈帧中一般不会保存这部分信息
+
+4. 一个方法在正常调用完成之后究竟需要使用哪一个返回指令还需要根据方法返回值的实际数据类型而定
+
+5. 在字节码指令中，返回指令包含`ireturn`(当返回值是`boolean`、`byte`、`char`、`short`和`int`类型时使用)、`lreturn`、`freturn`、`dreturn`以及`areturn`，另外还有一个`return`指令提供声明为`void`的方法、实例初始化方法、类和接口的初始化方法使用
+
+6. 在方法执行的过程中国年遇到了异常`Exception`，并且这个异常没有在方法内进行处理，也就是只要在本方法的异常表中没有搜索到匹配的异常处理器，就会导致方法退出。简称异常完成出口
+
+   方法执行过程中抛出异常时的异常处理，存储一个异常处理表，方便在发生异常的时候找到处理异常的代码
+
+```java
+public class ReturnAddressTest {	// 3
+    public void methodA() {			// 4
+        try {						// 5
+            int i = 1 / 0;			// 6
+        } catch (Exception e) {		// 7
+            e.printStackTrace();	// 8
+        }							// 9
+    }								// 10
+}									// 11
+```
+
+![](https://gitee.com/dingwanli/picture/raw/master/20210527204544.png)
+
+![](https://gitee.com/dingwanli/picture/raw/master/20210527204609.png)
+
+## 5. 本地方法接口
+
+### 5.1 什么是本地方法
+
+本地方法`Native Method`：一个`Native Method`就是一个`Java`调用非`Java`代码的接口。
+
+一个`Native Method`是这样的一个`Java`方法：该方法的实现由非`Java`语言实现，比如`C`。这个特征并非`Java`所特有，有很多其他的编程语言都有这一机制，比如在`C++`中，可以`extern`告知`C++`编译器去调用一个`C`的函数。本地接口的作用是融合不同的编程语言为`Java`所用，它的初衷是融合`C/C++`程序
+
+### 5.2 为什么使用本地方法
+
+`Java`使用起来非常方便，然而有些层次的任务用`Java`实现起来不容易，或者我们对程序的效率要求特别高时，就可考虑使用本地方法
+
+> **与Java环境交互**
+
+有时`Java`应用需要与`Java`外面的环境交互，这是本地方法存在的主要原因。`Java`需要与一些底层系统，如操作系统或某些硬件交换信息时的情况。本地方法正是这样一种交流机制：它为我么提供了一个非常简洁的接口，而且我们无需去了解`java`应用之外的繁琐的细节
+
+> **与操作系统交互**
+
+`JVM`支持着`Java`语言本身和运行时库，它是`Java`程序赖以生存的平台，它由一个解释器（解释字节码）和一些连接到本地代码的库组成。然而不管怎样，它毕竟不是一个完整的系统，它经常依赖与一些底层系统的支持。这些底层系统常常是强大的操作系统。通常使用本地方法，我们得以用`Java`实现了`jre`的与底层系统的交互，甚至`JVM`的一些部分就是使用`C`写的。还有，如果我们要使用一些`Java`语言本身没有提供封装的操作系统特性时，我们也需要使用本地方法
+
+> **Sun' s Java**
+
+`Sun`的解释器是用`C`实现的，这使得它能像一些普通的`C`一样与外部交互。`jre`大部分是用`Java`实现的，它也通过一些本地方法与外界交互。例如；类`java.lang.Thread`的`setPriority()`方法是用`java`实现的，但是它实现调用的是该类里的本地方法`setPriority0()`。这个本地方法是用`C`实现的，并被植入`JVM`内部，在`Windows 95`的平台上，这个本地方法最终调用`Win32 SetPriority() API`。这是一个本地方法的具体实现由`JVM`直接提供，更多的情况是本地方法由外部的动态链接库`external dynamic link library`提供，然后被`JVM`调用
+
+## 6. 本地方法栈
+
+<img src="https://gitee.com/dingwanli/picture/raw/master/20210527214017.png" style="zoom:50%;" />
+
+1. `Java`虚拟机栈用于管理`Java`方法的调用，而本地方法栈用于管理本地方法的调用
+
+2. 本地方法栈，也是线程私有的
+
+3. 允许被实现成固定或者是可动态扩展的内存大小(在内存溢出方面是相同的)
+
+   如果线程请求分配的栈容量超过本地方法栈允许的最大容量，`Java`虚拟机将会抛出一个`StackOverflowError`异常。
+
+   如果本地方法栈可以动态扩展，并且在尝试扩展的时候无法申请到足够的内存，或者创建新的线程时没有足够的内存去创建对应的本地方法栈，那么`java`虚拟机将会抛出一个`OutOfMemoryError`异常
+
+4. 本地方法是使用`C`语言实现的
+
+5. 它的具体做法是`Native Method Stack`中登记`native`方法，在`Execution Engine`执行时加载本地方法库
+
+6. 当某个线程调用一个本地方法时，它就进入了一个全新的并且不再受虚拟机限制的世界。它和虚拟机拥有同样的权限
+
+   本地方法可以通过本地方法接口访问虚拟机内部的运行时数据区
+
+   它甚至可以直接使用本地处理器中的寄存器
+
+   直接从本地内存的堆中分配任意数量的内存
+
+7. 并不是所有的`JVM`都支持本地方法。因为`Java`虚拟机规范并没有明确要求本地方法栈的使用语言、具体实现方式、数据结构等。如果`JVM`产品不打算支持`native`方法，也可以无需实现本地方法栈
+
+8. 在`Hotspot JVM`中，直接将本地方法栈和虚拟机栈合二为一
