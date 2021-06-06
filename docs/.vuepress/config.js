@@ -76,14 +76,13 @@ module.exports = {
             '@vuepress/last-updated',
             {
                 transformer: (timestamp, lang) => {
-                  // 不要忘了安装 moment
-                  lang = 'zh-cn'
-                  const moment = require('moment')
-                  moment.locale(lang)
-                  return moment(timestamp).fromNow()
+                    // 不要忘了安装 moment
+                    const moment = require('moment')
+                    moment.locale(lang)
+                    return moment(timestamp).fromNow()
                 }
             }
-          ]
+        ]
     ],
     themeConfig: {
         // vuepress-theme-reco主题的类型
