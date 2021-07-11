@@ -1,5 +1,5 @@
 ---
-title: java高级
+title: java
 date: '2021-04-03'
 sidebar: 'auto'
 categories:
@@ -43,9 +43,10 @@ tags:
 
    ```java
    public class ThreadTest {
-       public static void main(String[] args){
+       public static void main(String[] args) throws InterruptedException {
            MyThread t1 = new MyThread();
            t1.start();
+           Thread.sleep(1000); // 主线程睡1000ms
            for(int i = 1; i <= 10; i++){
                if(i % 2 != 0) {
                    System.out.printf("MainThread: %d\n", i);
@@ -65,20 +66,20 @@ tags:
        }
    }
    ```
-
+   
    执行结果
-
+   
    ```java
-   MainThread: 1
-   MainThread: 3
-   MainThread: 5
-   MainThread: 7
-   MainThread: 9
    MyThread: 2
    MyThread: 4
    MyThread: 6
    MyThread: 8
    MyThread: 10
+   MainThread: 1
+   MainThread: 3
+   MainThread: 5
+   MainThread: 7
+   MainThread: 9
    ```
    
 5. `start()`一个对象只能调用一次
@@ -95,6 +96,7 @@ tags:
    join() 在线程A中调用线程B的join(),此时的线程A进入阻塞状态，直到线程B执行完毕
    sleep(long millis) 阻塞当前线程millis毫秒
    isAlive() 判断当前线程是否存活
+   interrupt() 中断一个休眠线程
    ```
 
 #### 1.2.2 方式二

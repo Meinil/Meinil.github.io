@@ -2597,3 +2597,111 @@ loader.loaderClass("com.valid.HelloWorld");
 
 #### 4.4.2 实现
 
+`Java`提供了抽象类`java.lang.ClassLoader`，所有用户自定义的类加载器都应该继承`ClassLoader`类
+
+在自定义`ClassLoader`的子类时候，常见有两种方法
+
+1. 重写`loadClass()`方法
+2. 重写`findClass()`方法:star:
+
+> **对比**
+
+这两种方法本质上差不多，毕竟`loadClass()`也会调用`findClass()`，但是从逻辑上讲我们最好不要直接修改`loadClass()`的内部逻辑。建议的做法是只在`findClass()`里重写自定义类的加载方法，根据参数指定类的名字，返回对应的`Class`对象的引用
+
+- `loadClass()`这个方法是实现双亲委派模型逻辑的地方，擅自修改这个方法会导致模型被破坏，容易造成问题。因此我们最好是在双亲委派模型框架内进行小范围的改动，不破坏原有的稳定结构。同时，也避免了自己重写`loadClass()`方法的过程中必须写双亲委派的重复代码，从代码的复用性来看，不直接修改这个方法始终是比较好的选择
+- 当编写号自定义类加载器后，便可以在程序中调用`loadClass()`方法来实现类加载操作
+
+> **说明**
+
+其父类加载器是系统类加载器
+
+`JVM`中的所有类加载都会使用`java.lang.ClassLoader(String)`接口(自定义类加载器并重写`java.lang.ClassLoader.loadClass(String)`接口的除外)，连`JDK`的核心类库也不能例外
+
+```java
+public class MyClassLoader extends ClassLoader{
+    private String path;
+
+    public MyClassLoader(ClassLoader parent, String path) {
+        super(parent);
+        this.path = path;
+    }
+
+    public MyClassLoader(String path) {
+        this.path = path;
+    }
+
+    @Override
+    protected Class<?> findClass(String className) throws ClassNotFoundException {
+        BufferedInputStream bis = null;
+        ByteArrayOutputStream bos = null;
+        Class<?> aClass = null;
+        try {
+            // 加载指定路径下的字节码文件
+            bis = new BufferedInputStream(new FileInputStream(path + className + ".class"));
+            bos = new ByteArrayOutputStream();
+
+            int len = 0;
+            byte[] buffer = new byte[1024];
+            while ((len = bis.read(buffer)) != -1) {
+                bos.write(buffer, 0, len);
+            }
+
+            // 将byte数组转换为Class对象
+            aClass = defineClass(null, bos.toByteArray(), 0, bos.size());
+        } catch (IOException e) {
+            e.printStackTrace();
+        } finally {
+            try {
+                if ( bos != null) {
+                    bos.close();
+                }
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+            try {
+                if ( bis != null) {
+                    bis.close();
+                }
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+        }
+        return aClass;
+    }
+}
+class MyClassLoaderTest {
+    public static void main(String[] args) throws ClassNotFoundException {
+        MyClassLoader loader = new MyClassLoader("D:\\code\\java\\JVM\\chapter12\\src\\com\\valid\\");
+        Class<?> aClass = loader.loadClass("Initialization");
+        System.out.println(aClass);
+    }
+}
+```
+
+### 4.5 Java9新特性
+
+包含关系
+
+<img src="https://gitee.com/dingwanli/picture/raw/master/20210609123810.png" style="zoom:80%;" />
+
+为了保证兼容性，`JDK9`没有从根本声改变三层类加载器架构和双亲委派模型，但是为了模块化系统的顺利运行，仍然发生了一些值得被注意的变动
+
+1. 扩展机制被移除，扩展类加载器由于向后兼容性的原因被保留，不过被重命名为平台类加载器`platform class loader`。可以通过`ClassLoader`的新方法`getPlatformClassLoader()`来获取
+
+    `JDK9`时基于模块化进行构建(原来的`rt.jar`和`tools.jar`被拆分为数十个`JMOD`文件)，其中`Java`类库就已经天然地满足了可扩展的需求，那自然无需再保留`<JAVA_HOME>\lib\ext`目录，此前使用这个目录或者`java.ext.dirs`系统变量来扩展`JDK`功能的机制已经没有继续存在的价值了。
+
+2. 平台类加载器和应用程序类加载器都不再继承自`java.net.URLClassLoader`。现在启动类加载器、平台类加载器、应用程序类加载器全部继承于`jdk.internal.loader.BuiltinClassLoader`
+
+    ![](https://gitee.com/dingwanli/picture/raw/master/20210609124116.png)
+
+    如果有程序直接依赖了这种继承关系，或者依赖了`URLClassLoader`类的特定方法，那代码很可能会在`JDK9`或更高的版本中崩溃
+
+3. 在`Java9`中，类加载器有了名称。该名称在构造方法中指定，可以通过`getName()`方法来获取。平台类加载器的名称是`platform`，应用类加载器的名称是`app`。类加载器的名称在调试与类加载器相关的问题时非常有用
+
+4. 启动类加载器现在是`JVM`内部和`java`类库共同协作实现的类加载器(以前是`C++`实现)，但是为了与之前代码兼容，在获取启动类加载器的场景只能够仍然返回`null`，而不会得到`BootClassLoader`的实例
+
+5. 类加载的委派关系也发生了变动
+
+    当平台及应用程序类加载器收到类加载请求，在委派给父加载器加载前，要先判断该类是否能够归属到某一个系统模块中，如果可以找到这样的归属关系，就要优先委派给负责那个模块的加载器完成加载
+
+    
