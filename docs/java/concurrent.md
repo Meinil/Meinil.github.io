@@ -1,4 +1,15 @@
-zu本项目所使用的依赖
+---
+title: 设计模式
+date: '2021-09-05'
+sidebar: 'auto'
+categories:
+ - java
+tags:
+ - java
+ - 并发编程
+---
+
+本项目所使用的依赖
 
 ```xml
 <!--logback一般搭配slf4j使用-->
@@ -2428,7 +2439,7 @@ class ParkUnpark {
 }
 ```
 
-## 3.共享模型之内存
+## 3. 共享模型之内存
 
 `Java`内存模型(`JMM`)即`Java Memory Model`，它定义了主存、工作内存抽象概念，底层对应着`CPU`寄存器、缓存、硬件内存、`CPU`指令优化等
 
@@ -3865,7 +3876,7 @@ class Test3 {
 
 > 因为成员变量保存的数据也可以称为状态信息，因此没有成员变量就称之为【无状态】
 
-## 6.共享模型之工具
+## 6. 共享模型之工具
 
 ### 6.1 线程池
 
@@ -4058,8 +4069,1007 @@ public class Test3 {
 2. 线程池状态变为`STOP`，不会接受新任务，会将队列中的任务返回，并用`interrupt`的方式中断正在执行的任务
 
     ```java
-    void shutdownNow();
+    List<Runnable> shutdownNow();
     ```
 
+3. 其他方法
+
+    ```java
+    // 不在RUNNING状态的线程池，此方法就返回true
+    boolean isShutdown();
     
+    // 线程池状态是否是TERMINATED
+    boolean isTerminated();
+    
+    // 调用shutDown后，由于调用线程并不会等待所有任务运行结束，因此如果它想在线程池TERMINATED后做些事情，可以利用此方法等待
+    boolean awaitTermination(long timeout, TimeUint unit) throws InterruptedException;
+    ```
+
+#### 6.1.6 异常处理
+
+在线程池执行任务的过程中如果出现异常，默认情况下是不会抛出的，需要我们手动处理
+
+```java
+@Slf4j
+public class Test {
+    public static void main(String[] args) throws ExecutionException, InterruptedException {
+        ExecutorService pool = Executors.newFixedThreadPool(1);
+
+        // 自行处理
+        pool.submit(() -> {
+            try{
+                log.debug("running...");
+                int i = 1 / 0;
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+        });
+
+        // 通过future对象返回，正确情况下future返回任务的返回值，异常情况下返回异常信息
+        Future<Boolean> result = pool.submit(() -> {
+            log.debug("running...");
+            int i = 1 / 0;
+            return true;
+        });
+
+        log.debug("{}", result.get());
+    }
+}
+```
+
+### 6.2 异步模式之工作线程
+
+让有限的工作线程`Worker Thread`来轮流异步处理无限多的任务。也可以将其归类为分工模式，它的典型实现就是线程池，也体现了经典设计模式中的享元模式
+
+注意，不同任务类型应该使用不同的线程池，这样能够避免饥饿，并能提升效率
+
+#### 6.2.1 线程饥饿
+
+固定大小线程池会有饥饿现象
+
+假设现在两个工人是用一个线程池中的两个线程，他们要做的事情是：为客人点餐和到后厨做菜，这是两个阶段的工作。客人点餐：必须先点完餐，等菜做好，上菜，在此期间处理点餐的工人必须等待，后厨做菜即可。有两种情况
+
+- 工人A处理了点餐任务，接下来它要等着工人B把菜做好，然后上菜，他们能相互配合完成任务
+- 但现在同时来了两个客人，这个时候工人A和B处理点餐了，这时没人做饭了，死锁
+
+```java
+@Slf4j
+public class Test {
+    private static List<String> MENU = Arrays.asList("地三鲜", "宫保鸡丁", "辣子鸡丁", "烤鱿鱼");
+    private static Random RANDOM = new Random();
+
+    public static void main(String[] args) {
+        ExecutorService pool = Executors.newFixedThreadPool(2);
+
+        pool.execute(() -> {
+            log.debug("处理点餐...");
+            Future<String> f = pool.submit(() -> {
+                log.debug("做菜");
+                return cooking();
+            });
+            try {
+                log.debug("上菜: {}", f.get());
+            } catch (InterruptedException | ExecutionException e) {
+                e.printStackTrace();
+            }
+        });
+
+        pool.execute(() -> {
+            log.debug("处理点餐...");
+            Future<String> f = pool.submit(() -> {
+                log.debug("做菜");
+                return cooking();
+            });
+            try {
+                log.debug("上菜: {}", f.get());
+            } catch (InterruptedException | ExecutionException e) {
+                e.printStackTrace();
+            }
+        });
+    }
+
+    private static String cooking() {
+        return MENU.get(RANDOM.nextInt(MENU.size()));
+    }
+}
+// 07:46:36.668 【pool-1-thread-2】 - 处理点餐... 
+// 07:46:36.668 【pool-1-thread-1】 - 处理点餐...
+```
+
+程序发生死等
+
+#### 6.2.2 解决办法
+
+将任务分配给不同的线程池，相同性质的任务分给同一个线程池
+
+```java
+@Slf4j
+public class Test {
+    private static List<String> MENU = Arrays.asList("地三鲜", "宫保鸡丁", "辣子鸡丁", "烤鱿鱼");
+    private static Random RANDOM = new Random();
+
+    public static void main(String[] args) {
+        ExecutorService waiterPool = Executors.newFixedThreadPool(1);
+        ExecutorService cookPool = Executors.newFixedThreadPool(1);
+
+        waiterPool.execute(() -> {
+            log.debug("处理点餐...");
+            Future<String> f = cookPool.submit(() -> {
+                log.debug("做菜");
+                return cooking();
+            });
+            try {
+                log.debug("上菜: {}", f.get());
+            } catch (InterruptedException | ExecutionException e) {
+                e.printStackTrace();
+            }
+        });
+
+        waiterPool.execute(() -> {
+            log.debug("处理点餐...");
+            Future<String> f = cookPool.submit(() -> {
+                log.debug("做菜");
+                return cooking();
+            });
+            try {
+                log.debug("上菜: {}", f.get());
+            } catch (InterruptedException | ExecutionException e) {
+                e.printStackTrace();
+            }
+        });
+    }
+
+    private static String cooking() {
+        return MENU.get(RANDOM.nextInt(MENU.size()));
+    }
+}
+// 08:08:08.589 【pool-1-thread-1】 - 处理点餐... 
+// 08:08:08.592 【pool-2-thread-1】 - 做菜 
+// 08:08:08.592 【pool-1-thread-1】 - 上菜: 辣子鸡丁 
+// 08:08:08.594 【pool-1-thread-1】 - 处理点餐... 
+// 08:08:08.595 【pool-2-thread-1】 - 做菜 
+// 08:08:08.595 【pool-1-thread-1】 - 上菜: 宫保鸡丁 
+```
+
+#### 6.2.3 线程合适的数量
+
+过小会导致程序不能充分利用系统资源，容易产生线程饥饿
+
+过大会导致更多的线程上下文切换，占用更多的内存
+
+> CPU密集型运算
+
+通常采用`CPU`核数加1能够实现最优的`CPU`利用率,`+1`是保证当前线程由于页缺失故障(操作系统)或其他原因导致暂停时，额外的这个线程就能够派上用场，保证`CPU`时钟周期不被浪费
+
+> I/O密集型运算
+
+`CPU`不总是处于繁忙状态，例如，当你执行业务计算时，这时候会使用`CPU`资源，但当你执行`IO`操作时、远程`RPC`调用时，包括进行数据库操作时，这时候`CPU`就闲下来了，你可以利用多线程提高它的利用率
+
+经验公式
+
+```
+线程数=核心数*期望CPU利用率*总时间(CPU计算时间+等待时间)/CPU计算时间
+```
+
+例如四核`CPU`计算时间是`50%`，其他等待时间是`50%`，期望`CPU`被`100%`利用，套用公式
+
+```
+4 * 100% * 100% / 50% = 8
+```
+
+### 6.3 任务调度线程池
+
+在【任务调度线程池】功能加入之前，可以使用`java.util.Timer`来实现定时功能，`Timer`的优点在于简单易用，但由于所有任务都是由同一个线程来调度，因此所有任务都是串行执行的，同一时间只能有一个任务在执行，前一个任务的延迟或异常都将会影响到之后的任务
+
+```java
+@Slf4j
+public class Test {
+    public static void main(String[] args) {
+        Timer timer = new Timer();
+
+        TimerTask task1 = new TimerTask() {
+            @Override
+            public void run() {
+                log.debug("task 1");
+                try {
+                    TimeUnit.SECONDS.sleep(1);
+                } catch (InterruptedException e) {
+                    e.printStackTrace();
+                }
+            }
+        };
+        TimerTask task2 = new TimerTask() {
+            @Override
+            public void run() {
+                log.debug("task 2");
+            }
+        };
+        log.debug("start...");
+        timer.schedule(task1, 1000);
+        timer.schedule(task2, 1000);
+    }
+}
+// 08:55:07.446 【main】 - start... 
+// 08:55:09.449 【Timer-0】 - task 1 
+// 08:55:09.450 【Timer-0】 - task 2 
+```
+
+可以看到虽然设置`task2`是推迟1s执行，但是由于`task1`的延迟执行，导致`task2`在`2s`后才执行。假设任务1出现异常，这会直接导致任务线程的终止，`task2`将没有执行的机会
+
+#### 6.3.1 延时任务
+
+```java
+@Slf4j
+public class Test {
+    public static void main(String[] args) {
+        ScheduledExecutorService pool = Executors.newScheduledThreadPool(2);
+        for(int i = 0; i < 10; i++) {
+            int id = i;
+            pool.schedule(() -> {
+                log.debug("task" + id);
+            }, 1, TimeUnit.SECONDS);
+        }
+    }
+}
+```
+
+通过`ScheduledThreaPool`可以很容实现并发执行延时任务，并且各个任务之间不会有影响
+
+#### 6.3.2 定时任务
+
+间隔一秒执行任务
+
+```java
+@Slf4j
+public class Test {
+    public static void main(String[] args) {
+        ScheduledExecutorService pool = Executors.newScheduledThreadPool(1);
+        log.debug("start...");
+        // 从上一次任务开始时算起，间隔两秒执行一次
+        pool.scheduleAtFixedRate(() -> {
+            log.debug("running1...");
+            try {
+                TimeUnit.SECONDS.sleep(2);
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            }
+        }, 1, 1, TimeUnit.SECONDS);
+
+        // 从上一次任务结束时算起，间隔三秒执行一次
+        pool.scheduleWithFixedDelay(() -> {
+            log.debug("running2...");
+            try {
+                TimeUnit.SECONDS.sleep(2);
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            }
+        }, 1, 1, TimeUnit.SECONDS);
+    }
+}
+```
+
+#### 6.3.4 应用场景
+
+每周四18:00:00定时执行任务
+
+```java
+public class Test7 {
+    // 一周的时间间隔
+    private static final long period = 7 * 24 * 60 * 60 * 1000;
+    public static void main(String[] args) {
+        ScheduledExecutorService pool = Executors.newScheduledThreadPool(1);
+        // 获取当前时间
+        LocalDateTime now = LocalDateTime.now();
+        // 获取周四的时间
+        LocalDateTime time = LocalDateTime.now()
+                                        .withHour(18)
+                                        .withMinute(0)
+                                        .withSecond(0)
+                                        .withNano(0)
+                                        .with(DayOfWeek.THURSDAY);
+        // 如果当前时间>本周周四，应当获取下周周四
+        if (now.compareTo(time) > 0) {
+            time = time.plusWeeks(1);
+        }
+        // 计算时间差值
+        long dealy = Duration.between(now, time).toMillis();
+        pool.scheduleAtFixedRate(() -> {
+            System.out.println("running...");
+        }, dealy, period, TimeUnit.MILLISECONDS);
+    }
+}
+```
+
+### 6.4 Tomcat线程池
+
+![tomcat连接器](https://gitee.com/dingwanli/picture/raw/master/concurrent/20210831112027.png)
+
+各组件简介
+
+- `LimitLatch`用来限流，可以控制最大连接个数，类似`JUC`中的`Semaphore`
+- `Acceptor`只负责【接受新的`socket`连接】
+- `Poller`只负责监听`socket channel`是否有【可读的`I/O`事件】
+- 一旦可读，封装一个任务对象`socketProcessor`，提交给`Executor`线程池处理
+- `Executor`线程池中的工作线程最终负责【处理请求】
+
+`Tomcat`线程池扩展了`ThreadPoolExecutor`，行为稍有不同
+
+- 如果总线程数达到`maximumPoolSize`，这时不会立刻抛出`RejectedExecutionException`异常。而是再次尝试将任务放入队列，如果还失败，才抛出`RejectedExecutionException`异常
+
+`Connector`配置
+
+| 配置项              | 默认值 | 说明                                 |
+| ------------------- | ------ | ------------------------------------ |
+| acceptorThreadCount | 1      | acceptor线程数量                     |
+| pollerThreadCount   | 1      | poller线程数量                       |
+| minSpareThreads     | 10     | 核心线程数，即corePollSize           |
+| maxThreads          | 200    | 最大线程数，即maximumPoolSize        |
+| executor            | -      | Executor名称，用来引用下面的Executor |
+
+`Executor`线程配置
+
+| 配置项                  | 默认值            | 说明                                    |
+| ----------------------- | ----------------- | --------------------------------------- |
+| threadPriority          | 5                 | 线程优先级                              |
+| daemon                  | true              | 是否守护线程                            |
+| minSpareThreads         | 25                | 核心线程数，即corePoolSize              |
+| maxThreads              | 200               | 最大线程数，即maximumPoolSize           |
+| maxIdleTime             | 60000             | 线程生存时间，单位是毫秒，默认值即1分钟 |
+| maxQueueSize            | Integer.MAX_VALUE | 队列长度                                |
+| prestartminSpareThreads | false             | 核心线程是否在服务器启动时启动          |
+
+### 6.5 Fork/join
+
+#### 6.5.1 概念
+
+`Fork/Join`是`JDK 1.7`加入的新的线程池实现，它体现的是一种分治思想，适用于能够进行任务拆分的`CPU`密集型运算
+
+所谓的任务拆分，是将一个大任务拆分为算法上相同的小人物，直至不能拆分可以直接求解。跟递归相关的一些计算，如归并排序、斐波那契数列、都可以用分支思想进行求解
+
+`Fork/Join`在分治的基础上加入了多线程，可以把每个任务的分解和合并交给不同的线程来完成，进一步提升了运算效率
+
+`Fork/Join`默认会创建与`CPU`核心数大小相同的线程池
+
+#### 6.5.2 使用
+
+```java
+@Slf4j
+public class Test8 {
+    public static void main(String[] args) {
+        ForkJoinPool pool = new ForkJoinPool();
+        System.out.println(pool.invoke(new MyTask(5)));
+    }
+}
+
+// 计算1~n之间整数的和
+class MyTask extends RecursiveTask<Integer> {
+
+    private int n;
+
+    public MyTask(int n) {
+        this.n = n;
+    }
+
+    @Override
+    protected Integer compute() {
+        if (n == 1) {
+            return 1;
+        }
+        MyTask t1 = new MyTask(n - 1);
+        t1.fork();                  // 让一个线程去执行此任务
+        // 获取任务的结果并合并
+        return n + t1.join();
+    }
+}
+```
+
+## 7.JUC
+
+### 7.1 AQS
+
+全称是`AbstractQueueSynchronizer`，是阻塞式锁和相关的同步器工具的框架
+
+> 特点
+
+用`state`属性来表示锁资源的状态(分独占模式和共享模式)，子类需要定义如何维护这个状态，控制如何获取锁和释放锁
+
+- `getState`-获取`state`状态
+- `getState`-设置`state`状态
+- `compareAndSetState`-乐观锁机制设置`state`状态
+- 独占模式是只有一个线程能够访问资源，而共享模式可以允许多个线程访问资源
+
+提供了基于`FIFO`的等待队列，类似于`Monitor`的`EntryList`
+
+条件变量来实现等待、唤醒机制、支持多个条件变量，类似于`Monitor`的`WaitSet`
+
+子类主要实现了这样一些方法(默认抛出`UnsupportedOperationException`)
+
+`tryAcquire`、`tryRelease`、`tryAcquireShared`、`tryReleaseShared`、`isHeldExclusively`
+
+### 7.2 ReentrantLock
+
+#### 7.2.1 加解锁流程
+
+<div style="text-align: center;">
+    <img src="https://gitee.com/dingwanli/picture/raw/master/concurrent/20210831161056.png" alt="image-20210831161050173" style="zoom:80%;" />
+    <p>ReentrantLock关系图</p>
+</div>
+
+构造器默认是非公平锁实现
+
+```java
+public ReentrantLock() {
+    sync = new NonfairSync();
+}
+```
+
+> 执行流程
+
+1. 当没有竞争的时候
+
+	<img src="https://gitee.com/dingwanli/picture/raw/master/concurrent/20210831162426.png" alt="未命名文件" style="zoom:80%;" />
+
+	修改状态为1，并且锁的拥有者设置为当前线程
+
+2. 出现竞争
+
+	<img src="https://gitee.com/dingwanli/picture/raw/master/concurrent/20210831162959.png" alt="未命名文件 (2)" style="zoom:80%;" />
+
+	`Thread-1`执行了
+
+	- `CAS`尝试将`state`由0改为1，结果失败
+	- 进入`tryAcquire`逻辑，这时`state`已经是1，结果仍然失败
+	- 接下来进入`addWaiter`逻辑，构造`Node`队列
+	
+	<img src="https://gitee.com/dingwanli/picture/raw/master/concurrent/20210831164616.png" alt="未命名文件 (3)" style="zoom:80%;" />
+
+- 图中黄色三角表示该`Node`的`waitStatus`状态，其中`0`为默认正常状态，`-1`表示有责任唤醒后继节点
+- `Node`的创建是懒惰的
+- 其中第一个`Node`称为`Dummy`(哑元)或哨兵，用来占位，并不关联线程
+
+当前线程进入`acquireQueued`逻辑
+
+1. `acquireQueued`会在一个死循环中不断尝试获得锁，失败后进入`park`阻塞
+
+2. 如果自己是紧邻着`head`(排第二位)，那么再次`tryAcquire`尝试获取锁，当然这是`state`仍为1，失败
+
+3. 进入`shouldParkAfterFailedAcauire`逻辑，将前驱`node`，即`head`的`waitStatus`改为`-1`，这次返回`false`
+
+	<img src="https://gitee.com/dingwanli/picture/raw/master/concurrent/20210831164750.png" alt="未命名文件" style="zoom:80%;" />
+
+4. `shouldParkAfterFailedAcquire`执行完毕回到`acquireQueued`，再次`tryAcquire`尝试获取锁，当然这时`state`仍为1，失败
+
+5. 当再次进入`shouldParkAfterFailedAcquire`时，这时因为其前驱`node`的`waitStatus`已经是`-1`这次返回`true`
+
+6. 进入`parkAndCheckInterrupt`，`Thread-1 park`(粉色表示)此时`Thread-1`已经阻塞
+
+	<img src="https://gitee.com/dingwanli/picture/raw/master/concurrent/20210831165433.png" alt="未命名文件" style="zoom:80%;" />
+
+经过一段时间假设有多个线程经历上述过程竞争失败，
+
+<img src="https://gitee.com/dingwanli/picture/raw/master/concurrent/20210831165822.png" alt="未命名文件" style="zoom:80%;" />
+
+`Thread-0`释放锁，进入`tryRelease`流程，如果成功：设置`exclusiveOwnerThread`为`null`，`state=0`
+
+<img src="https://gitee.com/dingwanli/picture/raw/master/concurrent/20210831170144.png" alt="未命名文件 (2)" style="zoom:80%;" />
+
+当前队列不为`null`，并且`head`的`waitStatus=-1`，进入`unparkSuccessor`流程
+
+找到队列中离`head`最近的一个`Node`(每取消的)，`unpark`恢复其运行，本例中即为`Thread-1`
+
+回到`Thread-1`的`AcquireQueued`流程
+
+<img src="https://gitee.com/dingwanli/picture/raw/master/concurrent/20210831171049.png" alt="未命名文件" style="zoom:80%;" />
+
+如果加锁成功(没有竞争)，会设置
+
+- `exclusiveOwnerThread`为`Thread-1`、`state=1`
+- `head`指向刚刚`Thread-1`所在的`Node`，该`Node`清空`Thread`
+- 原本的`head`因为从链表断开，而可被垃圾回收
+
+如果这时候有其他线程来竞争(非公平的体现)，例如这时有`Thread-4`来了
+
+<img src="https://gitee.com/dingwanli/picture/raw/master/concurrent/20210831171551.png" alt="未命名文件" style="zoom:80%;" />
+
+如果不巧又被`Thread-4`抢了先(如果是公平锁，它会先检查AQS队列中是否有节点)
+
+- `Thread-4`被设置为`exclusiveOwnerThread`，`state=1`
+- `Thread-1`再次进入`acquireQueued`流程，获取锁失败，重新进入`park`阻塞
+
+#### 7.2.2 可重入原理
+
+当发生锁重入时`state`会自增1，而释放时，每释放一次，`state`都会减一，直至减为0才算释放成功
+
+#### 7.2.3 条件变量
+
+每个条件变量起始对应着一个等待队列，其实现类就是`ConditionObject`
+
+执行流程
+
+> await流程
+
+开始`Thread-0`持有锁，调用`await`，进入`ConditionObject`的`addConditionWaiter`流程创建新的`Node`状态为`-2`(Node.CONDITION)，关联`Thread-0`，加入等待队列尾部
+
+<img src="https://gitee.com/dingwanli/picture/raw/master/concurrent/20210831194856.png" alt="未命名文件 (1)" style="zoom:80%;" />
+
+接下来进入`AQS`的`fullyRelease`流程，释放同步器上的锁
+
+<img src="https://gitee.com/dingwanli/picture/raw/master/concurrent/20210831195129.png" alt="未命名文件 (2)" style="zoom:80%;" />
+
+`unpark AQS`队列中的下一个节点，竞争锁，假设没有其他竞争线程，那么`Thread-1`竞争成功
+
+<img src="https://gitee.com/dingwanli/picture/raw/master/concurrent/20210831184254.png" alt="未命名文件" style="zoom:80%;" />
+
+> signal流程
+
+假设`Thread-1`要来唤醒`Thread-0`
+
+<img src="https://gitee.com/dingwanli/picture/raw/master/concurrent/20210831195417.png" alt="未命名文件 (3)" style="zoom:80%;" />
+
+进入`ConditionObject`的`doSignal`流程，取得等待队列中第一个`Node`，即`Thread-0`所在`Node`
+
+<img src="https://gitee.com/dingwanli/picture/raw/master/concurrent/20210831195729.png" alt="未命名文件 (4)" style="zoom:80%;" />
+
+执行`transferForSignal`流程，将该`Node`加入`AQS`队列尾部，将`Thread-0`的`waitStatus`改为0，`Thread-0`的`waitStatus`改为-1
+
+<img src="https://gitee.com/dingwanli/picture/raw/master/concurrent/20210831200258.png" alt="未命名文件 (1)" style="zoom:80%;" />
+
+`Thread-1`释放锁，进入`unlock`流程
+
+### 7.3 读写锁
+
+#### 7.3.1 ReentrantReadWriteLock
+
+当读操作远远高于写操作时，这时候使用读写锁让读-读可以并发，提高性能
+
+示例：提供一个容器类内部分别使用读锁保护数据的`read()`方法，写锁保护数据的`write()`方法
+
+```java
+public class Test9 {
+    public static void main(String[] args) {
+        DataContainer data = new DataContainer();
+        ReentrantLock lock = new ReentrantLock();
+        for (int i = 0; i < 2; i++) {
+            int id = i + 1;
+            new Thread(() -> {
+                data.read();
+            }, "t" + id).start();
+        }
+
+        for (int i = 0; i < 2; i++) {
+            int id = i + 1;
+            new Thread(() -> {
+                data.write();
+            }, "t" + id).start();
+        }
+    }
+}
+
+@Slf4j
+class DataContainer {
+    private Object data;
+    private ReentrantReadWriteLock rw = new ReentrantReadWriteLock();
+    private ReentrantReadWriteLock.ReadLock r = rw.readLock();
+    private ReentrantReadWriteLock.WriteLock w = rw.writeLock();
+
+    public Object read() {
+        log.debug("获取读锁...");
+        r.lock();
+        try {
+            log.debug("读取");
+            TimeUnit.SECONDS.sleep(1);
+            return data;
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        } finally {
+            log.debug("释放读锁");
+            r.unlock();
+        }
+        return null;
+    }
+
+    public void write() {
+        log.debug("获取写锁...");
+        w.lock();
+        try{
+            log.debug("写入");
+            TimeUnit.SECONDS.sleep(1);
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        } finally {
+            log.debug("释放写锁");
+            w.unlock();
+        }
+    }
+}
+```
+
+注意事项
+
+- 读锁不支持条件变量
+- 重入时升级不支持：即持有读锁的情况下去获取写锁，会导致获取写锁永久等待
+- 重入时降级支持：即持有写锁的情况下去获取读锁
+
+#### 7.3.2 读写锁的原理
+
+读写锁用的是同一个`Sync`同步器，因此等待队列、`state`等也是同一个
+
+> t1 w.lock , t2 r.lock
+
+1. `t1`成功上锁，流程与`ReentrantLock`加锁相比没有特殊之处，不同是写锁状态占了`state`的低`16`位，而读锁使用的是`state`的高`16`位
+
+	<img src="https://gitee.com/dingwanli/picture/raw/master/concurrent/20210902140152.png" alt="未命名文件" style="zoom:80%;" />
+
+2. `t2`执行`r.lock`，这时进入读锁的`sync.acquireShared(1)`流程，首先会进入`tryAcquireShared`流程。如果有写锁占据，那么`tryAcquireShared`返回`-1`表示失败(0，表示成功，但后继节点不会继续唤醒。正数表示成功，而且数值是还有几个后继节点需要唤醒，读写锁只会返回1)
+
+	<img src="https://gitee.com/dingwanli/picture/raw/master/concurrent/20210902141143.png" alt="未命名文件 (1)" style="zoom:80%;" />
+
+3. 这时会进入`sync.doAcquireShared(1)`流程，首先也是调用`addWaiter`添加节点，不同之处在于节点被设置为`Node.SHARED`模式而非`Node.EXCLUSIVE`模式，注意此时`t2`仍处于活跃状态
+
+	<img src="https://gitee.com/dingwanli/picture/raw/master/concurrent/20210902142037.png" alt="未命名文件 (3)" style="zoom:80%;" />
+
+4. `t2`会看看自己的节点是不是老二，如果是，还会再次调用`tryAcquireShared(1)`来尝试获取锁
+
+5. 如果没有成功，在`doAcquireShared`内`for(;;)`循环一次，把前驱节点的`waitStatus`改为`-1`，再`for(;;)`循环一次尝试`tryAcquireShared(1)`如果还不成功，那么在`parkAndCheckInterrupt`处`park`
+
+	<img src="https://gitee.com/dingwanli/picture/raw/master/concurrent/20210902142112.png" alt="未命名文件 (5)" style="zoom:80%;" />
+
+> t3 r.lock，t4 w.lock
+
+在上面那种状态下，假设又有`t3`加读锁和`t4`加写锁，这期间`t1`仍然持有锁
+
+<img src="https://gitee.com/dingwanli/picture/raw/master/concurrent/20210902183032.png" alt="未命名文件" style="zoom:80%;" />
+
+> t1 w.unlock
+
+这时会走到写锁的`sync.release(1)`流程，调用`sync.tryRelease(1)`成功，如下图所示
+
+<img src="https://gitee.com/dingwanli/picture/raw/master/concurrent/20210902182935.png" alt="未命名文件 (6)" style="zoom:80%;" />
+
+接下来唤醒流程`sync.unparkSuccessor`，让`t2`恢复运行，这时`t2`在`doAcquireShared`内`parkAndCheckInterrupt()`处恢复运行
+
+这次再执行一次`for(;;)`执行`tryAcquireShared`成功则让读锁计数(`state`高十六位)加一
+
+<img src="https://gitee.com/dingwanli/picture/raw/master/concurrent/20210902182832.png" alt="未命名文件 (5)" style="zoom:80%;" />
+
+这时`t2`已经恢复运行，接下来`t2`调用`setHeadAndPropagate(node, 1)`，它原本所在节点被设置为头节点
+
+<img src="https://gitee.com/dingwanli/picture/raw/master/concurrent/20210902184505.png" alt="未命名文件 (2)" style="zoom:80%;" />
+
+之后在`setHeadAndPropagate`方法内还会检查下一个节点是否是`shared`，如果是则调用`doReleaseShared()`将`head`的状态从`-1`改为`0`并唤醒`t3`，这时`t3`在`doAcquireShared`内`parkAndCheckInterrupt()`处恢复运行
+
+<img src="https://gitee.com/dingwanli/picture/raw/master/concurrent/20210902184352.png" alt="未命名文件 (1)" style="zoom:80%;" />
+
+这时再执行一次`for(;;)`执行`tryAcquireShared`成功让读锁计数加一
+
+<img src="https://gitee.com/dingwanli/picture/raw/master/concurrent/20210902184300.png" alt="未命名文件" style="zoom:80%;" />
+
+这时`t3`已经恢复运行，接下来`t3`调用`setHeadAndPropagate(node, 1)`，它原本所在节点被设置为头节点
+
+<img src="https://gitee.com/dingwanli/picture/raw/master/concurrent/20210902184754.png" alt="未命名文件" style="zoom:80%;" />
+
+下一个节点`t4`不是`shared`了，因此不会继续唤醒`t4`所在节点
+
+> t2 r.unlock()，t3 r.unlock()
+
+`t2`进入`sync.releaseShared(1)`中，调用`tryReleaseShared(1)`让计数减一(高位减一)，但由于计数还不为零，不会唤醒后继节点
+
+<img src="https://gitee.com/dingwanli/picture/raw/master/concurrent/20210902185338.png" alt="未命名文件 (2)" style="zoom:80%;" />
+
+`t3`进入`sync.releaseShared(1)`中，调用`tryReleaseShared(1)`让计数器减一(高位减一)，这时计数器为零，进入`doReleaseShared()`将头节点从`-1`改为`0`并唤醒`t4`
+
+<img src="https://gitee.com/dingwanli/picture/raw/master/concurrent/20210902185624.png" alt="未命名文件 (3)" style="zoom:80%;" />
+
+之后`t4`在`acquireQueued`中`parkAndCheckInterrupt`处恢复运行，再次`for(;;)`，没有竞争`tryAcquire(1)`成功，修改头结点，流程结束
+
+<img src="https://gitee.com/dingwanli/picture/raw/master/concurrent/20210902185913.png" alt="未命名文件 (4)" style="zoom:80%;" />
+
+#### 7.3.2 StampedLock
+
+该类自`JDK8`加入，是为了进一步又换读性能，它的特点是在使用读锁，写锁时都必须配合【戳】使用
+
+```java
+StampedLock lock = new StampedLock();
+```
+
+加解读锁
+
+```java
+long stamp = lock.readLock();
+lock.unlockRead(stamp);
+```
+
+加解写锁
+
+```java
+long stamp = lock.writeLock();
+lock.unlockWrite(stamp);
+```
+
+乐观读，`StampLock`支持`tryOptimisticRead()`方法(乐观读)，读取完毕后需要做一次戳校验如果校验通过，表示这期间确实没有写操作，数据可以安全使用，如果校验没通过，需要重新获取读锁，保证数据安全
+
+```java
+long stamp = lock.tryOptimisticRead();
+// 验戳
+if (!lock.validate(stamp)) {
+    // 锁升级
+}
+```
+
+具体示例
+
+```java
+public class Test {
+    public static void main(String[] args) throws InterruptedException {
+        Resource resource = new Resource(10);
+        new Thread(() -> {
+            try {
+                resource.read();
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            }
+        }, "t1").start();
+        TimeUnit.MILLISECONDS.sleep(500);
+
+        new Thread(() -> {
+            resource.write(20);
+        }, "t3").start();
+    }
+}
+
+@Slf4j
+class Resource {
+    private int data;
+    private final StampedLock lock = new StampedLock();
+
+    public Resource(int data) {
+        this.data = data;
+    }
+
+    public int read() throws InterruptedException {
+        long stamp = lock.tryOptimisticRead();
+        log.debug("乐观读{}", stamp);
+        TimeUnit.SECONDS.sleep(1);
+        if (lock.validate(stamp)) {
+            log.debug("读取成功{}", stamp);
+            return data;
+        }
+
+        // 锁升级
+        log.debug("锁升级{}", stamp);
+        try{
+            stamp = lock.readLock();
+            log.debug("读锁{}", stamp);
+            TimeUnit.SECONDS.sleep(1);
+            return data;
+        } finally {
+            log.debug("读锁解锁{}", stamp);
+            lock.unlock(stamp);
+        }
+    }
+
+    public void write(int data) {
+        long stamp = lock.writeLock();
+        try {
+            log.debug("写操作{}", stamp);
+            this.data = data;
+            TimeUnit.SECONDS.sleep(1);
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        } finally {
+            log.debug("解写锁{}", stamp);
+            lock.unlock(stamp);
+        }
+    }
+}
+```
+
+### 7.4 Semaphore
+
+信号量，用来限制能同时访问共享资源的线程上限
+
+```java
+@Slf4j
+public class Test {
+    public static void main(String[] args) {
+        Semaphore s = new Semaphore(3);
+        for (int i = 0; i < 10; i++) {
+            new Thread(() -> {
+                try {
+                    s.acquire(); // 请求一个信号量
+                    log.debug("begin...");
+                    TimeUnit.SECONDS.sleep(1);
+                } catch (InterruptedException e) {
+                    e.printStackTrace();
+                } finally {
+                    log.debug("end...");
+                    s.release(); // 释放信号量
+                }
+            }).start();
+        }
+    }
+}
+```
+
+### 7.5 CountDownLatch
+
+用来进行线程同步协作，等待所有线程完成倒计时。其中构造参数用来初始化等待计数值，`await()`用来等待计数归零，`countDown()`用来让计数减一，`countDwon`一般搭配线程池使用
+
+```java
+@Slf4j
+public class Test {
+    public static void main(String[] args) throws InterruptedException {
+        ExecutorService pool = Executors.newFixedThreadPool(2);
+        CountDownLatch latch = new CountDownLatch(2);
+        pool.submit(() -> {
+            log.debug("begin....");
+            try {
+                TimeUnit.SECONDS.sleep(1);
+                latch.countDown(); //计数器减一
+                log.debug("end....");
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            }
+        });
+        pool.submit(() -> {
+            log.debug("begin....");
+            try {
+                TimeUnit.SECONDS.sleep(2);
+                latch.countDown(); //计数器减一
+                log.debug("end....");
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            }
+        });
+
+        log.debug("await...");
+        latch.await(); //等待计数器减为一
+    }
+}
+```
+
+### 7.6 CyclicBarrier
+
+循环栅栏，用来进行线程协作，等待线程满足某个计数。构造时设置【计数个数】，每个线程执行到某个需要"同步"的时刻调用`await()`方法进行等待，当等待的线程满足【计数个数】时，继续执行
+
+```java
+@Slf4j
+public class Test13 {
+    public static void main(String[] args) {
+        ExecutorService pool = Executors.newFixedThreadPool(2); // 线程数保持与计数值一致
+        CyclicBarrier barrier = new CyclicBarrier(2, () -> {
+            log.debug("任务1, 任务2 finish..."); //当计数值减为0之后，会调用此线程,CyclicBarrier可以使用多次
+        });
+
+        pool.submit(() -> {
+            log.debug("任务1 begin...");
+            try {
+                TimeUnit.SECONDS.sleep(1);
+                barrier.await(); // 让初始值减一,如果不为0,则阻塞
+            } catch (InterruptedException | BrokenBarrierException e) {
+                e.printStackTrace();
+            }
+        });
+
+        pool.submit(() -> {
+            log.debug("任务2 begin...");
+            try {
+                TimeUnit.SECONDS.sleep(2);
+                barrier.await(); // 让初始值减一,如果不为0,则阻塞
+            } catch (InterruptedException | BrokenBarrierException e) {
+                e.printStackTrace();
+            }
+        });
+
+        pool.shutdown();
+    }
+}
+```
+
+### 7.7 线程安全集合类
+
+```mermaid
+graph TD
+遗留的安全集合 --> Hashtable
+遗留的安全集合 --> Vector
+
+修饰的安全集合 --> |使用Collections的方法修饰| SynchronizedMap
+修饰的安全集合 --> |使用Collections的方法修饰|SynchronizedList
+
+JUC安全集合 --> Blocking类
+JUC安全集合 --> CopyOnWrite类
+JUC安全集合 --> Concurrent类
+```
+
+遗留的安全集合：安全的实现方式为每个方法上面都添加`synchronized`关键字修饰
+
+修饰的安全集合：使用装饰器模式，将每个原集合方法使用`synchronized`代码块包裹
+
+`JUC`安全集合：`Blocking`、`CopyOnWrite`、`Concurrent`
+
+- `Blcoking`大部分使用基于锁，并提供用来阻塞的方法
+
+- `CopyOnWrite`之类容器修改开销相对较重
+
+- `Concurrent`类型的容器，内部使用`cas`优化，一般具有较高的吞吐量
+
+	弱一致性：遍历时弱一致性，例如，当利用迭代器遍历时，如果容器发生修改，迭代器仍然可以继续进行遍历，这时内容是旧的；大小弱一致性，`size`操作未必是`100%`准确；读取弱一致性，遍历时如果发生了修改，对于非安全容器来讲，使用`fail-fast`机制也就是让遍历立刻失败，抛出`ConcurrentModificationException`，不再继续遍历
+
+#### 7.7.1 ConcurrentHashMap
+
+练习：单词计数
+
+生成测试数据
+
+```java
+public class Test1 {
+    static final String ALPHA = "abcedfghijklmnopqrstuvwxyz";
+    public static void main(String[] args) {
+        int length = ALPHA.length();
+        int count = 200;
+        List<String> list = new ArrayList<>(length * count);
+        for (int i = 0; i < length; i++) {
+            char ch = ALPHA.charAt(i);
+            for (int j = 0; j < count; j++) {
+                list.add(String.valueOf(ch));
+            }
+        }
+        Collections.shuffle(list);
+        for (int i = 0; i < 26; i++) {
+            try (PrintWriter out = new PrintWriter(
+                    new OutputStreamWriter(
+                            new FileOutputStream("tmp/" + (i+1) + ".txt")))) {
+                String collect = list.subList(i * count, (i + 1) * count).stream()
+                        .collect(Collectors.joining("\n"));
+                out.print(collect);
+            } catch (IOException e) {
+            }
+        }
+    }
+}
+```
+
+模板代码，模板代码封装了多线程读取文件的代码
+
+```java
+private static <V> void demo(Supplier<Map<String,V>> supplier,
+                             BiConsumer<Map<String,V>,
+                             List<String>> consumer) {
+    Map<String, V> counterMap = supplier.get();
+    List<Thread> ts = new ArrayList<>();
+    for (int i = 1; i <= 26; i++) {
+        int idx = i;
+        Thread thread = new Thread(() -> {
+            List<String> words = readFromFile(idx);
+            consumer.accept(counterMap, words);
+        });
+        ts.add(thread);
+    }
+    ts.forEach(t->t.start());
+    ts.forEach(t-> {
+        try {
+            t.join();
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        }
+    });
+    System.out.println(counterMap);
+}
+public static List<String> readFromFile(int i) {
+    ArrayList<String> words = new ArrayList<>();
+    try (BufferedReader in = new BufferedReader(new InputStreamReader(new FileInputStream("tmp/"
+                                                                                          + i +".txt")))) {
+        while(true) {
+            String word = in.readLine();
+            if(word == null) {
+                break;
+            }
+            words.add(word);
+        }
+        return words;
+    } catch (IOException e) {
+        throw new RuntimeException(e);
+    }
+}
+```
 
