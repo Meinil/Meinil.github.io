@@ -19,7 +19,7 @@ jobs:
         uses: peaceiris/actions-gh-pages@v2
         env:
           ACTIONS_DEPLOY_KEY: ${{ secrets.ACTIONS_DEPLOY_KEY }}
-          EXTERNAL_REPOSITORY: SchrodingerSeeCat/SchrodingerSeeCat.github.io #可以新建一个SchrodingerSeeCat.github.io仓库发布到master
+          EXTERNAL_REPOSITORY: MeiNil/MeiNil.github.io #可以新建一个SchrodingerSeeCat.github.io仓库发布到master
           PUBLISH_BRANCH: master
           PUBLISH_DIR: docs/.vuepress/dist
         with:

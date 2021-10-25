@@ -1,5 +1,5 @@
 ---
-title: 设计模式
+title: 并发编程
 date: '2021-09-05'
 sidebar: 'auto'
 categories:
